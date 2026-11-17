@@ -1,0 +1,30 @@
+[
+  {
+    "c": 2,
+    "cn": "Office lease, 220 King St",
+    "page": 3,
+    "x": "Tenant shall pay monthly rent of $3,200.00 on the first day of each month.",
+    "sum": "You pay $3,200 rent on the 1st."
+  },
+  {
+    "c": 2,
+    "cn": "Office lease, 220 King St",
+    "page": 9,
+    "x": "Tenant shall maintain commercial general liability insurance of not less than $2,000,000.",
+    "sum": "You must carry $2 million liability insurance."
+  },
+  {
+    "c": 3,
+    "cn": "Northwind Telecom service",
+    "page": 2,
+    "x": "This Agreement renews automatically unless cancelled in writing at least 75 days before the anniversary date.",
+    "sum": "Cancel 75 days before the anniversary, or it renews."
+  },
+  {
+    "c": 3,
+    "cn": "Northwind Telecom service",
+    "page": 4,
+    "x": "A late fee of $25 applies to any invoice unpaid after 30 days.",
+    "sum": "Late invoices cost $25 extra."
+  }
+]

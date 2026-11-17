@@ -1,0 +1,44 @@
+/* ContraClear design tokens, taken from the final design boards.
+   Colour is used for confidence only. Everything else is black, white and grey. */
+:root {
+  /* Neutrals */
+  --ink: #111111;        /* primary text, primary buttons, focus ring */
+  --ink-2: #333333;      /* contract text, body copy */
+  --ink-3: #444444;      /* secondary text */
+  --ink-4: #6B6B6B;      /* quiet text, labels */
+  --line-strong: #BDBDBD;/* ticks, key-cap borders */
+  --line: #E3E3E3;       /* dividers, card borders */
+  --wash: #F4F4F4;       /* hover, quote background */
+  --paper: #FFFFFF;
+
+  /* Confidence: always paired with an icon AND a label */
+  --agree: #1E7B3A;      --agree-tint: #EAF5EE;    /* "Both checks agree"  (lucide circle-check) */
+  --disagree: #A66F00;   --disagree-tint: #FFF4D6; /* "Checks disagree: please confirm" (triangle-alert) */
+  --unverified: #C62828; --unverified-tint: #FCE9E8; /* "Couldn't verify" (octagon-x) */
+
+  /* Type */
+  --font-ui: "Inter Variable", "Inter", system-ui, sans-serif;            /* self-host it: the network badge must read 0 bytes */
+  --font-contract: "Source Serif 4 Variable", "Source Serif 4", Georgia, serif;    /* original contract wording only */
+  --text-xs: 14px;  /* labels next to 16px text, key caps */
+  --text-s: 16px;   /* minimum body size */
+  --text-m: 18px;   /* card titles, contract text */
+  --text-l: 22px;
+  --text-xl: 32px;
+
+  /* Space (ma): 48+ between ideas */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+
+  /* Shape and motion */
+  --radius-s: 8px; --radius-m: 10px; --radius-l: 14px; --radius-pill: 999px;
+  --target: 44px;                               /* minimum touch target */
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --fade: 120ms;                                /* panels, menus, overlays */
+
+  /* Workspace layout */
+  --library-w: 272px; --library-w-collapsed: 64px;
+  --needs-w: 440px;                             /* 500 at >=1700px, 360 at <=1180px */
+  --contract-col: 640px;                        /* keeps lines short; ~60% of screen stays empty */
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

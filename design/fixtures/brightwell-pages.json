@@ -1,0 +1,595 @@
+[
+  {
+    "n": 1,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "Statement of Work No. 3",
+    "paras": [
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "This Statement of Work is made between Brightwell Marketing Inc. (“Provider”) and Northfield Goods Ltd. (“Client”), effective March 1, 2026.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "It forms part of the Master Services Agreement between the parties and is governed by it.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 2,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "1. Definitions and 2. Services",
+    "paras": [
+      {
+        "lead": "1.1 Agreement.",
+        "segs": [
+          {
+            "x": "This Statement of Work, its Schedules and any written amendment.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "2.1 Scope.",
+        "segs": [
+          {
+            "x": "Provider shall deliver a monthly marketing retainer, website hosting and software licensing as set out in Schedule A.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 3,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "3. Term and 5. Reports",
+    "paras": [
+      {
+        "lead": "3.1 Term.",
+        "segs": [
+          {
+            "x": "The Term begins on March 1, 2026 and ends on February 28, 2027",
+            "q": 7,
+            "qid": "q7"
+          },
+          {
+            "x": ", unless renewed under Section 12.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "5.1 Reports.",
+        "segs": [
+          {
+            "x": "Provider shall deliver a written report within five (5) business days after each month end.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 4,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "7. Fees and Payment",
+    "paras": [
+      {
+        "lead": "7.1 Fees.",
+        "segs": [
+          {
+            "x": "The fees for the Services are set out in Schedule A.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "7.2 Invoices.",
+        "segs": [
+          {
+            "x": "Provider will invoice Client on or before the last day of each month for the following month.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "7.3 Monthly Fees.",
+        "segs": [
+          {
+            "x": "Client shall pay Provider a fixed monthly retainer of four thousand five hundred dollars ($4,500.00) CAD, due on the first (1st) day of each calendar month",
+            "q": 1,
+            "qid": "q1"
+          },
+          {
+            "x": " during the Term, without set-off or deduction.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "7.4 Late Payment.",
+        "segs": [
+          {
+            "x": "Amounts not paid when due bear interest at one and one-half percent (1.5%) per month.",
+            "q": 4,
+            "qid": "q4"
+          }
+        ]
+      },
+      {
+        "lead": "7.5 Taxes.",
+        "segs": [
+          {
+            "x": "All fees are exclusive of applicable GST/HST.",
+            "q": 5,
+            "qid": "q5"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 5,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "8. Hosting and Software",
+    "paras": [
+      {
+        "lead": "8.1 Hosting.",
+        "segs": [
+          {
+            "x": "Provider shall host Client’s website for CAD $380.00 per month, due with the retainer.",
+            "q": 2,
+            "qid": "q2"
+          }
+        ]
+      },
+      {
+        "lead": "8.2 Licence.",
+        "segs": [
+          {
+            "x": "Client shall pay an annual software licence fee of CAD $1,800.00, due on June 1 of each year.",
+            "q": 3,
+            "qid": "q3"
+          }
+        ]
+      },
+      {
+        "lead": "8.3 Availability.",
+        "segs": [
+          {
+            "x": "Provider shall keep the hosting environment available at least 99.5% of each month.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 6,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "8. Hosting and Software (continued)",
+    "paras": [
+      {
+        "lead": "8.4 Backups.",
+        "segs": [
+          {
+            "x": "Provider shall back up Client data daily and keep backups for thirty (30) days.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "8.5 Incidents.",
+        "segs": [
+          {
+            "x": "Provider shall tell Client of any security incident within seventy-two (72) hours.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "8.6 Data location.",
+        "segs": [
+          {
+            "x": "Client data shall be stored in Canada.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 7,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "9. Equipment Lease",
+    "paras": [
+      {
+        "lead": "9.1 Lease.",
+        "segs": [
+          {
+            "x": "Provider leases the Equipment listed in Schedule A to Client during the Term.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "9.2 Lease charge.",
+        "segs": [
+          {
+            "x": "Client shall pay a monthly lease charge of six hundred fifty dollars ($650.00) for the Equipment.",
+            "q": 13,
+            "qid": "q13"
+          }
+        ]
+      },
+      {
+        "lead": "9.3 Risk.",
+        "segs": [
+          {
+            "x": "Client is responsible for loss of or damage to the Equipment.",
+            "q": 10,
+            "qid": "q10"
+          }
+        ]
+      },
+      {
+        "lead": "9.4 Cancelling.",
+        "segs": [
+          {
+            "x": "Client may cancel the Equipment Lease by giving thirty (30) days written notice.",
+            "q": 9,
+            "qid": "q9"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 8,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "10. Client Responsibilities",
+    "paras": [
+      {
+        "lead": "10.1 Approvals.",
+        "segs": [
+          {
+            "x": "Client shall approve each month’s work within five (5) business days. Silence counts as approval.",
+            "q": 14,
+            "qid": "q14"
+          }
+        ]
+      },
+      {
+        "lead": "10.2 Brand files.",
+        "segs": [
+          {
+            "x": "Client shall send its logo and brand files within ten (10) days of signing.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 9,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "11. Confidentiality",
+    "paras": [
+      {
+        "lead": "11.1 Duty.",
+        "segs": [
+          {
+            "x": "Each party shall keep the other party’s confidential information secret.",
+            "q": 11,
+            "qid": "q11"
+          }
+        ]
+      },
+      {
+        "lead": "11.2 Exceptions.",
+        "segs": [
+          {
+            "x": "This does not apply to information that is public or that the law requires a party to disclose.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 10,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "11. Confidentiality (continued)",
+    "paras": [
+      {
+        "lead": "11.3 Return.",
+        "segs": [
+          {
+            "x": "On request, each party shall return or destroy the other party’s confidential information.",
+            "q": 12,
+            "qid": "q12"
+          }
+        ]
+      },
+      {
+        "lead": "11.4 Liability.",
+        "segs": [
+          {
+            "x": "Neither party is liable for indirect or consequential loss.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 11,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "12. Term and Termination",
+    "paras": [
+      {
+        "lead": "12.1 Automatic Renewal.",
+        "segs": [
+          {
+            "x": "This Agreement renews for twelve (12) months unless either party gives written notice that it wishes to cancel at least sixty (60) days before the renewal date.",
+            "q": 6,
+            "qid": "q6"
+          }
+        ]
+      },
+      {
+        "lead": "12.2 Ending Early.",
+        "segs": [
+          {
+            "x": "If Client chooses to terminate before the end of the Term, Client shall pay the early termination fee in Schedule B.",
+            "q": 15,
+            "qid": "q15"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 12,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "Schedule A: Fees",
+    "paras": [
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Marketing retainer. $4,500.00 per month.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Website hosting. $380.00 per month.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Equipment lease. $620.00 per month, plus applicable taxes.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Software licence. $1,800.00 per year.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 13,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "14. General",
+    "paras": [
+      {
+        "lead": "14.1 Notices.",
+        "segs": [
+          {
+            "x": "Any notice under this Agreement must be sent by email and by courier to the addresses on page 1.",
+            "q": 8,
+            "qid": "q8"
+          }
+        ]
+      },
+      {
+        "lead": "14.2 Governing law.",
+        "segs": [
+          {
+            "x": "This Agreement is governed by the laws of Ontario and the federal laws of Canada.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 14,
+    "file": "Contract_SOW_Brightwell.pdf",
+    "h": "Signatures",
+    "paras": [
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Signed for Brightwell Marketing Inc.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Signed for Northfield Goods Ltd.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 15,
+    "file": "Rate_Card_2026.pdf",
+    "h": "Rate Card 2026",
+    "paras": [
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Standard rate. CAD $145.00 per hour for work outside the monthly retainer.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Rush work within two (2) business days is billed at 1.5 times the standard rate.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 16,
+    "file": "Rate_Card_2026.pdf",
+    "h": "Expenses",
+    "paras": [
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Third-party costs are charged at cost when approved in writing by Client.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 17,
+    "file": "Rate_Card_2026.pdf",
+    "h": "Payment terms",
+    "paras": [
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Invoices for work outside the retainer are due thirty (30) days after the invoice date.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 18,
+    "file": "Amendment_1.docx",
+    "h": "Amendment No. 1",
+    "paras": [
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "This Amendment changes Statement of Work No. 3 as set out below.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "1. Equipment lease.",
+        "segs": [
+          {
+            "x": "The monthly lease charge in Section 9.2 is changed to six hundred twenty dollars ($620.00).",
+            "q": 13,
+            "qid": "q13b"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "n": 19,
+    "file": "Amendment_1.docx",
+    "h": "Amendment No. 1 (continued)",
+    "paras": [
+      {
+        "lead": "2. No other changes.",
+        "segs": [
+          {
+            "x": "All other terms of the Statement of Work remain in force.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      },
+      {
+        "lead": "",
+        "segs": [
+          {
+            "x": "Signed by both parties on March 15, 2026.",
+            "q": 0,
+            "qid": ""
+          }
+        ]
+      }
+    ]
+  }
+]

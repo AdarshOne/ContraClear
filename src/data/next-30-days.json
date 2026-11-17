@@ -1,0 +1,29 @@
+[
+  {
+    "d": "Dec 1",
+    "t": "Brightwell: retainer, hosting and lease",
+    "a": "$5,500",
+    "c": "Brightwell SOW No. 3",
+    "k": "y",
+    "act": "1 amount to check",
+    "open": 1
+  },
+  {
+    "d": "Dec 1",
+    "t": "Rent for 220 King St",
+    "a": "$3,200",
+    "c": "Office lease, 220 King St",
+    "k": "g",
+    "act": "",
+    "open": 0
+  },
+  {
+    "d": "Dec 16",
+    "t": "Last day to cancel Northwind before it renews",
+    "a": "Cancel by",
+    "c": "Northwind Telecom service",
+    "k": "r",
+    "act": "Notice period unclear",
+    "open": 0
+  }
+]

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ContraClear - Flow 7 Search and commands</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;max-width:100%;overflow-x:hidden}
+body{font-family:Inter,system-ui,sans-serif;color:#111;background:#fff;-webkit-font-smoothing:antialiased;font-size:16px;line-height:1.5}
+a{color:#111}button{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:3px solid #111;outline-offset:2px}
+kbd{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;border:1px solid #BDBDBD;border-bottom-width:2px;border-radius:6px;font:600 14px Inter,system-ui,sans-serif;color:#444;background:#fff;flex:none}
+.b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid #111;border-radius:10px;background:#fff;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none;color:#111;white-space:nowrap;transition:background .12s}
+.b:hover{background:#F4F4F4}.b.pri{background:#111;color:#fff}.b.pri:hover{background:#333}
+.b.pri kbd{background:transparent;color:#fff;border-color:#6B6B6B}
+.b.q{border-color:transparent;font-weight:500}.b.q:hover{background:#F4F4F4}
+.b:disabled{border-color:#E3E3E3;background:#fff;color:#6B6B6B;cursor:default}
+.ib{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid transparent;border-radius:10px;background:#fff;cursor:pointer;color:#111;text-decoration:none;flex:none}
+.ib:hover{background:#F4F4F4}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 10px 2px 6px;border:1px solid;border-radius:999px;font-size:16px;font-weight:600;line-height:1.3;white-space:nowrap}
+.disc{display:inline-flex;align-items:center;padding:4px 10px;background:#111;color:#fff;border-radius:6px;font-size:14px;font-weight:700;letter-spacing:.08em}
+.faint{color:#6B6B6B}.mute{color:#444}
+.stat{display:inline-flex;align-items:center;gap:8px}.stat i{width:8px;height:8px;border-radius:50%;background:#111;display:inline-block}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+.badge{position:fixed;right:16px;bottom:16px;z-index:95;display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:4px 12px;border:1px solid #E3E3E3;border-radius:999px;background:#fff;font-size:14px;color:#444}
+.badge i{width:8px;height:8px;border-radius:50%;background:#111;display:inline-block}
+.badge b{color:#111;font-weight:600}
+.badge.pulse b{animation:bp .6s}
+@keyframes bp{0%{text-decoration:underline 2px}100%{text-decoration:none}}
+.nla{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#444}
+.vh{position:absolute;left:-9999px}
+
+html,body{height:100%}
+.pbar{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px dashed #BDBDBD;background:#fff;font-size:14px;min-height:56px}
+.pbar .pt{font-weight:600;color:#444;letter-spacing:.04em;text-transform:uppercase}
+.ps{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 10px;border:1px solid #E3E3E3;border-radius:8px;background:#fff;cursor:pointer;font-size:14px}
+.ps.on{border-color:#111;font-weight:600}
+.pc{min-height:32px;padding:0 10px;border:1px dashed #BDBDBD;border-radius:999px;background:#fff;cursor:pointer;font-size:14px}
+.pc.on{border-style:solid;border-color:#111;font-weight:600}
+.stage{position:relative;min-height:calc(100vh - 57px);overflow:hidden}
+.bd{position:absolute;inset:0;pointer-events:none}
+.bd.drop{display:flex;align-items:center;justify-content:center;margin:24px;border:1px dashed #E3E3E3;border-radius:24px;color:#BDBDBD;font-size:32px;font-weight:500}
+.bd.ws{display:grid;grid-template-rows:60px 72px 1fr;opacity:.55}
+.bd.ws .r1{border-bottom:1px solid #E3E3E3}.bd.ws .r2{border-bottom:1px solid #E3E3E3}
+.bd.ws .r3{display:grid;grid-template-columns:240px 1fr 420px}
+.bd.ws .r3>div{border-right:1px solid #E3E3E3;padding:40px}
+.bar{height:10px;border-radius:5px;background:#F4F4F4;margin-bottom:14px}
+.veil{position:absolute;inset:0;background:rgba(255,255,255,.6)}
+.full{position:relative;min-height:calc(100vh - 57px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:48px 24px 96px;text-align:center}
+.center{position:relative;z-index:2;width:600px;max-width:calc(100% - 32px);margin:72px auto 96px;background:#fff;border:1px solid #111;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.12);padding:28px;display:flex;flex-direction:column;gap:16px}
+.side{position:absolute;z-index:2;top:0;right:0;bottom:0;width:520px;max-width:100%;background:#fff;border-left:1px solid #111;box-shadow:-16px 0 40px rgba(0,0,0,.08);padding:28px;display:flex;flex-direction:column;gap:16px;overflow:auto}
+.pop2{position:absolute;z-index:2;top:64px;right:120px;width:420px;max-width:calc(100% - 32px);background:#fff;border:1px solid #111;border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.12);padding:16px;display:flex;flex-direction:column;gap:12px}
+.ph{margin:0;font-size:24px;font-weight:500;letter-spacing:-0.01em;line-height:1.25}
+.big{margin:0;font-size:32px;font-weight:500;letter-spacing:-0.02em;line-height:1.2;max-width:640px}
+.pp{margin:0;font-size:17px;line-height:1.55;color:#333}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.full .acts{justify-content:center}
+.fld{display:flex;flex-direction:column;gap:6px;text-align:left;width:100%;max-width:380px}
+.fld label{font-weight:600}
+.fld input,.fld textarea,.fld select{min-height:48px;border:1px solid #111;border-radius:10px;padding:0 12px;font:inherit;font-size:17px;width:100%}
+.fld textarea{min-height:200px;padding:12px;resize:vertical}
+.fld .err{color:#111;font-weight:600;display:flex;gap:6px;align-items:center}
+.fld input.bad{border-width:2px}
+.cbx{display:flex;gap:12px;align-items:flex-start;text-align:left;font-size:16px;line-height:1.5;max-width:460px;cursor:pointer}
+.cbx input{width:22px;height:22px;flex:none;margin-top:1px;accent-color:#111}
+.lst{list-style:none;margin:0;padding:0;display:grid;width:100%}
+.lst li{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid #E3E3E3;font-size:16px;text-align:left}
+.lst li .x{flex:1;min-width:0}
+.lst li small{display:block;color:#6B6B6B;font-size:14px}
+.lk{border:0;background:none;padding:0 6px;min-height:44px;font-size:16px;color:#444;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+.ext{border:1px dashed #6B6B6B;border-radius:12px;padding:24px;color:#444;font-size:16px;text-align:center;width:100%}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:10px;text-align:left}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:12px;font-size:16px;line-height:1.5}
+.sn{width:28px;height:28px;border-radius:50%;border:1px solid #111;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:600}
+.meter{height:8px;border-radius:4px;background:#E3E3E3;overflow:hidden;width:160px}.meter i{display:block;height:100%;background:#111}
+.sbar{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;justify-content:center;gap:12px;align-items:center;padding:8px;border-bottom:1px solid #111;background:#fff;font-size:16px}
+.sk{background:#F4F4F4;border-radius:6px;height:14px;margin:8px 0;animation:skp 1.4s ease-in-out infinite}
+@keyframes skp{50%{opacity:.5}}
+.spin{width:28px;height:28px;border:3px solid #E3E3E3;border-top-color:#111;border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.tag{font-size:14px;color:#6B6B6B;letter-spacing:.04em;text-transform:uppercase}
+@media (max-width:760px){
+ .side,.center,.pop2{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;margin:0;max-height:86vh;overflow:auto;border:1px solid #111;border-bottom:0;border-radius:18px 18px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.14);padding:20px 16px 72px}
+ .side::before,.center::before,.pop2::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:#BDBDBD;margin:0 auto 4px}
+ .bd.ws .r3{grid-template-columns:1fr}.bd.ws .r3>div:nth-child(n+2){display:none}
+ .big{font-size:26px}.full{padding:32px 16px 96px}
+}
+
+.pane{width:820px;max-width:100%;border:1px solid #111;border-radius:14px;overflow:hidden;text-align:left;background:#fff}
+.tb{display:flex;gap:6px;align-items:center;padding:6px 12px;border-bottom:1px solid #E3E3E3;flex-wrap:wrap;color:#444;font-size:14px}
+.pc2{padding:24px 40px;min-height:360px;font:400 18px/1.75 "Source Serif 4",Georgia,serif;color:#333}
+.notice{display:flex;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid #E3E3E3;font:500 16px Inter,sans-serif;color:#111}
+.cur{box-shadow:0 0 0 3px #EAF5EE;background:#EAF5EE;text-decoration:underline 2px #111;text-underline-offset:5px}
+.oth{text-decoration:underline dotted #6B6B6B;text-underline-offset:5px}
+.usr{outline:1px dashed #111;outline-offset:2px}
+.tbl{width:100%;border-collapse:collapse;font-size:16px;text-align:left}
+.tbl th{font-size:14px;color:#6B6B6B;text-transform:uppercase;letter-spacing:.04em;padding:8px;border-bottom:1px solid #E3E3E3}
+.tbl td{padding:12px 8px;border-bottom:1px solid #E3E3E3}
+.tree{width:220px;border-right:1px solid #E3E3E3;padding:12px;font-size:16px;display:grid;gap:2px;align-content:start}
+.tree span{padding:6px 8px;border-radius:8px}.tree .on{background:#F4F4F4;font-weight:600}.tree .h{font-size:14px;color:#6B6B6B;text-transform:uppercase;letter-spacing:.04em;padding-top:12px}
+.lib{display:flex;width:1000px;max-width:100%;border:1px solid #111;border-radius:14px;overflow:hidden;text-align:left;background:#fff}
+.lib .m{flex:1;padding:24px;display:grid;gap:16px;align-content:start;min-width:0}
+.ctl{display:grid;gap:0;width:100%}
+.cv{display:grid;grid-template-columns:16px 1fr;gap:16px;text-align:left}
+.cv .dot{width:12px;height:12px;border-radius:50%;border:2px solid #111;margin-top:6px;background:#fff}
+.cv .dot.f{background:#111}
+.cv .line{border-left:2px solid #111;margin-left:5px;height:24px}
+.ev{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:start;padding:12px 0;border-top:1px solid #E3E3E3;text-align:left;animation:evi .3s both}
+@keyframes evi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.ev input{width:22px;height:22px;accent-color:#111;margin-top:2px}
+.ev pre{margin:6px 0 0;white-space:pre-wrap;font:400 14px/1.5 Inter,sans-serif;color:#444;background:#F4F4F4;border-radius:8px;padding:8px 10px}
+.prog{height:6px;border-radius:3px;background:#E3E3E3;overflow:hidden}.prog i{display:block;height:100%;background:#111}
+.mask{font:400 16px/1.7 "Source Serif 4",Georgia,serif;color:#333;background:#F4F4F4;border-radius:10px;padding:16px;margin:0;white-space:pre-wrap;text-align:left}
+.mask b{font:600 14px Inter,sans-serif;background:#111;color:#fff;border-radius:4px;padding:1px 6px}
+.keyb{font:600 22px ui-monospace,Menlo,monospace;letter-spacing:.06em;padding:20px;border:1px solid #111;border-radius:12px;text-align:center}
+@media print{.pbar,.noprint,.badge{display:none!important}}
+@media (max-width:760px){.tree{display:none}.pc2{padding:16px}.tbl th:nth-child(3),.tbl td:nth-child(3){display:none}}
+</style>
+</helmet>
+<div><nav class="pbar" aria-label="Prototype controls"><span class="pt">Prototype &middot; Flow 7 Search and commands</span><sc-for list="{{steps}}" as="p" hint-placeholder-count="4"><button class="{{p.cls}}" aria-current="{{p.on}}" onClick="{{p.go}}"><span class="num">{{p.n}}</span>{{p.t}}</button></sc-for><sc-if value="{{hasStates}}" hint-placeholder-val="{{ true }}"><span class="faint">States:</span><sc-for list="{{states}}" as="x" hint-placeholder-count="3"><button class="{{x.cls}}" aria-pressed="{{x.on}}" onClick="{{x.go}}">{{x.t}}</button></sc-for></sc-if></nav><sc-if value="{{v.s1}}" hint-placeholder-val="{{ true }}"><div class="stage"><div class="bd ws" aria-hidden="true"><div class="r1"></div><div class="r2"></div><div class="r3"><div><div class="bar" style="width:70%"></div><div class="bar" style="width:50%"></div><div class="bar" style="width:60%"></div></div><div><div class="bar"></div><div class="bar"></div><div class="bar" style="width:80%"></div><div class="bar"></div><div class="bar" style="width:70%"></div></div><div><div class="bar" style="width:60%"></div><div class="bar"></div><div class="bar" style="width:40%"></div></div></div></div><div class="veil"></div><div class="center" role="dialog" aria-label="Results"><div style="margin:-28px -28px 0"><input class="vh" aria-label="Search"><div style="padding:18px 20px;border-bottom:1px solid #E3E3E3;font-size:20px">insurance</div><div style="display:flex;gap:8px;padding:10px 20px;flex-wrap:wrap"><span class="chip" style="border-color:#111;background:#fff">All contracts</span><span class="chip" style="border-color:#E3E3E3;background:#fff;font-weight:400">Type</span><span class="chip" style="border-color:#E3E3E3;background:#fff;font-weight:400">Next 90 days</span></div></div><div style="border-top:1px solid #E3E3E3;padding:10px 0;display:grid;gap:4px;text-align:left"><b>You must carry $2 million liability insurance.</b><span style="font:400 15px/1.5 'Source Serif 4',serif;color:#333">&ldquo;Tenant shall maintain commercial general liability <b>insurance</b> of not less than $2,000,000.&rdquo;</span><span class="faint num" style="font-size:14px">Office lease, 220 King St &middot; p. 9</span></div><div style="border-top:1px solid #E3E3E3;padding:10px 0;display:grid;gap:4px;text-align:left"><b>Not found in Brightwell SOW No. 3</b><span style="font:400 15px/1.5 'Source Serif 4',serif;color:#333">&ldquo;Searched all 19 pages. No insurance wording.&rdquo;</span><span class="faint num" style="font-size:14px">Brightwell SOW No. 3</span></div><div class="faint" style="font-size:14px">Keyword and meaning: &ldquo;insurance&rdquo; also matches &ldquo;liability cover&rdquo;.</div><div class="acts"><a class="b pri" href="WsSearch.dc.html">Try the live search</a></div></div><div class="badge" role="status" aria-live="polite"><i></i><span>Nothing leaves this device</span><b class="num">0 bytes sent</b></div></div></sc-if><sc-if value="{{v.s1_searching}}" hint-placeholder-val="{{ false }}"><div class="stage"><div class="bd ws" aria-hidden="true"><div class="r1"></div><div class="r2"></div><div class="r3"><div><div class="bar" style="width:70%"></div><div class="bar" style="width:50%"></div><div class="bar" style="width:60%"></div></div><div><div class="bar"></div><div class="bar"></div><div class="bar" style="width:80%"></div><div class="bar"></div><div class="bar" style="width:70%"></div></div><div><div class="bar" style="width:60%"></div><div class="bar"></div><div class="bar" style="width:40%"></div></div></div></div><div class="veil"></div><div class="center" role="dialog" aria-label="Searching"><div style="margin:-28px -28px 0"><input class="vh" aria-label="Search"><div style="padding:18px 20px;border-bottom:1px solid #E3E3E3;font-size:20px">renewal</div><div style="display:flex;gap:8px;padding:10px 20px;flex-wrap:wrap"><span class="chip" style="border-color:#111;background:#fff">All contracts</span><span class="chip" style="border-color:#E3E3E3;background:#fff;font-weight:400">Type</span><span class="chip" style="border-color:#E3E3E3;background:#fff;font-weight:400">Next 90 days</span></div></div><div class="acts" role="status"><span class="spin" aria-hidden="true"></span>Searching 3 contracts on this device&hellip;</div></div><div class="badge" role="status" aria-live="polite"><i></i><span>Nothing leaves this device</span><b class="num">0 bytes sent</b></div></div></sc-if><sc-if value="{{v.s1_recent}}" hint-placeholder-val="{{ false }}"><div class="stage"><div class="bd ws" aria-hidden="true"><div class="r1"></div><div class="r2"></div><div class="r3"><div><div class="bar" style="width:70%"></div><div class="bar" style="width:50%"></div><div class="bar" style="width:60%"></div></div><div><div class="bar"></div><div class="bar"></div><div class="bar" style="width:80%"></div><div class="bar"></div><div class="bar" style="width:70%"></div></div><div><div class="bar" style="width:60%"></div><div class="bar"></div><div class="bar" style="width:40%"></div></div></div></div><div class="veil"></div><div class="center" role="dialog" aria-label="Recent searches"><div style="margin:-28px -28px 0"><input class="vh" aria-label="Search"><div style="padding:18px 20px;border-bottom:1px solid #E3E3E3;font-size:20px"><span class="faint">Search all contracts, or type a command</span></div><div style="display:flex;gap:8px;padding:10px 20px;flex-wrap:wrap"><span class="chip" style="border-color:#111;background:#fff">All contracts</span><span class="chip" style="border-color:#E3E3E3;background:#fff;font-weight:400">Type</span><span class="chip" style="border-color:#E3E3E3;background:#fff;font-weight:400">Next 90 days</span></div></div><div style="display:grid;gap:4px;text-align:left"><span class="tag">Recent</span><span style="padding:8px 0;border-top:1px solid #E3E3E3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /> <path d="M3 3v5h5" /> <path d="M12 7v5l4 2" /></svg> insurance</span><span style="padding:8px 0;border-top:1px solid #E3E3E3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /> <path d="M3 3v5h5" /> <path d="M12 7v5l4 2" /></svg> renewal</span><span style="padding:8px 0;border-top:1px solid #E3E3E3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /> <path d="M3 3v5h5" /> <path d="M12 7v5l4 2" /></svg> late fee</span><span class="tag" style="margin-top:12px">Commands</span><span style="padding:8px 0;border-top:1px solid #E3E3E3;display:flex;justify-content:space-between">Add files<kbd>&nbsp;</kbd></span><span style="padding:8px 0;border-top:1px solid #E3E3E3;display:flex;justify-content:space-between">Export<kbd>&nbsp;</kbd></span><span style="padding:8px 0;border-top:1px solid #E3E3E3;display:flex;justify-content:space-between">Switch engine<kbd>&nbsp;</kbd></span><span style="padding:8px 0;border-top:1px solid #E3E3E3;display:flex;justify-content:space-between">Lock vault<kbd>&nbsp;</kbd></span></div></div><div class="badge" role="status" aria-live="polite"><i></i><span>Nothing leaves this device</span><b class="num">0 bytes sent</b></div></div></sc-if><sc-if value="{{v.s1_none}}" hint-placeholder-val="{{ false }}"><div class="stage"><div class="bd ws" aria-hidden="true"><div class="r1"></div><div class="r2"></div><div class="r3"><div><div class="bar" style="width:70%"></div><div class="bar" style="width:50%"></div><div class="bar" style="width:60%"></div></div><div><div class="bar"></div><div class="bar"></div><div class="bar" style="width:80%"></div><div class="bar"></div><div class="bar" style="width:70%"></div></div><div><div class="bar" style="width:60%"></div><div class="bar"></div><div class="bar" style="width:40%"></div></div></div></div><div class="veil"></div><div class="center" role="dialog" aria-label="No results"><div style="margin:-28px -28px 0"><input class="vh" aria-label="Search"><div style="padding:18px 20px;border-bottom:1px solid #E3E3E3;font-size:20px">arbitration</div><div style="display:flex;gap:8px;padding:10px 20px;flex-wrap:wrap"><span class="chip" style="border-color:#111;background:#fff">All contracts</span><span class="chip" style="border-color:#E3E3E3;background:#fff;font-weight:400">Type</span><span class="chip" style="border-color:#E3E3E3;background:#fff;font-weight:400">Next 90 days</span></div></div><div style="display:grid;gap:12px;text-align:left"><b>No wording matches &ldquo;arbitration&rdquo; in 3 contracts.</b><div class="acts"><a class="b" href="WsNotFound.dc.html">Track this yourself</a><button class="b q">Search more broadly</button></div><span class="faint">Try: &ldquo;dispute&rdquo;, &ldquo;court&rdquo;, &ldquo;governing law&rdquo;.</span></div></div><div class="badge" role="status" aria-live="polite"><i></i><span>Nothing leaves this device</span><b class="num">0 bytes sent</b></div></div></sc-if></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+const S=[{"t": "Command bar", "states": [{"id": "s1", "label": "Results"}, {"id": "s1_searching", "label": "Searching"}, {"id": "s1_recent", "label": "Recent searches"}, {"id": "s1_none", "label": "No results"}]}];
+class Component extends DCLogic {
+constructor(p){ super(p); this.state=Object.assign({s:0,k:0},{}); }
+
+renderVals(){ const s=this.state; const v={}, nav={}; S.forEach((st,i)=>{ nav["s"+(i+1)]=()=>this.go(i,0); st.states.forEach((x,j)=>{ v[x.id]=(i===s.s&&j===s.k); nav[x.id]=()=>this.go(i,j); }); });
+ const out={v,nav,steps:S.map((st,i)=>({n:String(i+1),t:st.t,on:i===s.s?"true":"false",cls:i===s.s?"ps on":"ps",go:nav["s"+(i+1)]})),states:S[s.s].states.map((x,j)=>({t:x.label,cls:j===s.k?"pc on":"pc",on:j===s.k?"true":"false",go:nav[x.id]})),hasStates:S[s.s].states.length>1};
+ return this.extraVals?Object.assign(out,this.extraVals()):out; }
+go(i,j){ this.setState({s:i,k:j}); if(this.onGo) this.onGo(i,j); }
+}
+</script>
+</body>
+</html>
