@@ -1,14 +1,16 @@
 // The Workspace: library (left), document preview (centre), "What needs you" (right), 90-day strip (top).
 // Ported from design/boards/Workspace1440.dc.html. Everything else is a panel layered on top.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, ChevronDown, Download, Lock, Settings as Cog, Check, Circle, CircleCheck, UserCheck, SearchX, CalendarPlus, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, LayoutGrid, Printer, PanelLeftClose, PanelLeftOpen, CalendarDays, Files, PieChart, Plus, Pencil, Calendar, DollarSign, ListChecks, Copy, TextSelect, FileSpreadsheet, FileText, KeyRound, HelpCircle, Library, TriangleAlert, Sheet } from 'lucide-react';
+import { Search, ChevronDown, Download, Lock, Settings as Cog, Check, Circle, CircleCheck, UserCheck, SearchX, CalendarPlus, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, LayoutGrid, Printer, PanelLeftClose, PanelLeftOpen, CalendarDays, Files, PieChart, Plus, Pencil, Calendar, DollarSign, ListChecks, Copy, TextSelect, FileSpreadsheet, FileText, KeyRound, HelpCircle, Cloud, Library, TriangleAlert, Sheet } from 'lucide-react';
 import type { Contract, Db, Item, K } from '../lib/types';
 import { COL, eff, isNeed } from '../lib/types';
 import { download, toCsv, calEvents } from '../lib/exporters';
 import { fmtShort, today } from '../lib/dates';
 import { next30, status, strip } from '../lib/timeline';
 import { Badge, Chip, KIcon, Nla } from './kit';
-import { CalendarPanel, EnginePanel, FilesPanel, PortfolioPanel, SettingsPanel, SharePanel } from './Panels';
+import { pending } from '../lib/ai';
+import { net } from '../lib/net';
+import { CalendarPanel, CloudPanel, EnginePanel, FilesPanel, PortfolioPanel, SettingsPanel, SharePanel } from './Panels';
 
 interface Props { db: Db; setDb: (f: (d: Db) => Db) => void; active: string; setActive: (id: string) => void; startHome: boolean; onAdd: () => void; onLock: () => void; onSample: () => void; onDelete: () => void; onSignOut: () => void }
 type Track = { step: 'menu' | 'form'; txt: string; x: number; y: number; page: number; kind?: string; title?: string; who?: string; rem?: string };
@@ -44,7 +46,7 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
   const confirm = (id: number) => { const it = IT(id); if (!it || c.conf[id] !== undefined || c.dis[id]) return; if (eff(it) === 'r') return startEdit(id, 'wrong'); let v = it.value; if (it.conf && it.ai !== undefined) { const p = c.pick[id]; if (p === undefined) return say('Pick the right reading first: press 1 or 2.'); v = it.conf[p].v; } done(id, v, 'confirmed', 'You confirmed ' + v); };
   const saveEdit = () => { const v = s.editVal.trim(); if (!v || !s.edit) return; const id = s.edit.id, old = c.conf[id]?.v ?? IT(id)!.value; done(id, v, 'edited', `You changed ${old} → ${v}`); };
   const dismiss = (id: number) => { upd(x => ({ ...x, dis: { ...x.dis, [id]: true }, hist: log(x, id, 'You dismissed it') })); set({ sel: order.find(x => x !== id && need(x)) ?? order.find(x => x !== id && !c.dis[x]) ?? 0 }); say('Dismissed. It stays out of your calendar.', () => { upd(x => { const d = { ...x.dis }; delete d[id]; return { ...x, dis: d }; }); setToast(null); }); };
-  const acceptAll = () => { const n = order.filter(id => eff(IT(id)!) === 'g' && !c.dis[id]).length; if (n) upd(x => ({ ...x, accepted: true })); say(n ? `Confirmed the ${n} items both checks agree on.` : 'In Rules only, no items have two agreeing checks. Confirm each one yourself.'); };
+  const acceptAll = () => { const n = order.filter(id => eff(IT(id)!) === 'g' && !c.dis[id]).length; if (n) upd(x => ({ ...x, accepted: true })); say(n ? `Confirmed the ${n} items both checks agree on.` : 'No items have two agreeing checks yet. Confirm each one yourself, or turn on Cloud AI.'); };
   const allLeft = cs.reduce((n, x) => n + x.items.filter(i => isNeed(x, i.id)).length, 0);
   const openCal = () => { if (needIds.length) return say(`Check ${needIds.length} more first. Dates go to your calendar after review.`); if (!calEvents([c]).length) return say('This contract has no dated items to add.'); set({ panel: 'cal', pop: '' }); };
   const goPage = (n: number) => { n = Math.max(1, Math.min(c.pages.length, n)); const el = document.getElementById('pg' + n), pane = document.getElementById('doc'); if (el && pane) pane.scrollTop += el.getBoundingClientRect().top - pane.getBoundingClientRect().top - 8; set({ page: n, view: 'doc' }); };
@@ -54,7 +56,9 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
   const trackSave = () => { const t = s.track; if (!t) return; upd(x => ({ ...x, tracked: [...x.tracked, { id: 100 + x.tracked.length, kind: t.kind!, title: t.title!, who: t.who!, rem: t.rem!, txt: t.txt, page: t.page }] })); set({ track: null }); getSelection()?.removeAllRanges(); say('Tracked. You’ll find it under “Tracked by you”.'); };
   const openCmd = (q = '') => { set({ cmd: true, q, ci: 0, pop: '' }); setTimeout(() => document.getElementById('cmdin')?.focus(), 30); };
   const exportCsv = () => { set({ pop: '' }); download('ContraClear.csv', toCsv(cs), 'text/csv'); say(`CSV saved: ${cs.reduce((n, x) => n + x.items.length, 0)} items with quotes and pages.`); };
-  const pickEngine = (e: 'rules' | 'device' | 'cloud') => { if (e === 'rules') { set({ pop: '' }); say('Rules only. Every item waits for your check. Nothing leaves this device.'); } else set({ pop: '', panel: e }); };
+  const eng = db.settings.eng === 'cloud' ? 'cloud' : 'rules', setEng = (e: 'rules' | 'cloud') => setDb(d => ({ ...d, settings: { ...d.settings, eng: e } }));
+  const toSend = pending(c).length;
+  const pickEngine = (e: 'rules' | 'device' | 'cloud') => { if (e === 'rules') { set({ pop: '' }); setEng('rules'); net.reset(); say('Rules only. Nothing leaves this device. The counter is back at 0.'); } else if (e === 'cloud') { setEng('cloud'); set({ pop: '', panel: 'cloud' }); } else set({ pop: '', panel: e }); };
 
   // Search: keyword across every contract's wording and items.
   const results = useMemo(() => {
@@ -104,7 +108,7 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
       <h3 id={'h' + id}>{it.sentence}</h3>
       <dl className="meta"><dt>Who</dt><dd>{it.who}</dd><dt>{it.kind === 'money' ? 'Amount' : 'What'}</dt><dd className="num">{user ? cf.v : it.value}</dd><dt>Due</dt><dd className="num">{it.due}</dd></dl>
       {!isConf && <blockquote className="qt">“{it.quote}”</blockquote>}
-      {!isConf && !user && <div className="two num">Rules check: <b>{it.rules}</b> · AI check: <b>{both ? it.ai : 'off'}</b></div>}
+      {!isConf && !user && <div className="two num">Rules check: <b>{it.rules}</b> · AI check: <b>{both ? it.ai : eng === 'cloud' ? 'not sent yet' : 'off'}</b></div>}
       {isConf && <div className="side" role="radiogroup" aria-label="The two checks disagree. Pick one.">{it.conf!.map((d, j) => <button key={j} className="sd" role="radio" aria-checked={pk === j} style={{ borderColor: pk === j ? '#111' : '#E3E3E3' }} onClick={e => { e.stopPropagation(); upd(x => ({ ...x, pick: { ...x.pick, [id]: j } })); set({ sel: id }); trace(id, d.qid); }} onMouseEnter={e => { e.stopPropagation(); hover(id, d.qid); }}><span className="faint" style={{ fontSize: 14 }}><kbd>{j + 1}</kbd> {d.by}</span><span className="v num">{d.v}</span><q>{d.quote}</q><span className="num" style={{ fontSize: 14, fontWeight: 600 }}>{d.ref} · {d.note}</span><span style={{ fontSize: 14, fontWeight: 600, textDecoration: 'underline' }}>{pk === j ? 'Chosen' : 'Use this'}</span></button>)}</div>}
       {it.formula && <><button className="ref" aria-expanded={s.formula === id} onClick={e => { e.stopPropagation(); set({ formula: s.formula === id ? 0 : id }); }} style={{ alignSelf: 'flex-start', minHeight: 32 }}>{s.formula === id ? 'Hide how' : 'How was this worked out?'}</button>{s.formula === id && <><ol className="fx num">{it.formula.map((t, j) => <li key={j} style={{ animationDelay: j * 0.18 + 's' }}>{t}</li>)}</ol><Nla>Computed date. Not legal advice. Check the clause before you rely on it.</Nla></>}</>}
       {editing && <div className="edit" onClick={e => e.stopPropagation()}><b>{s.edit!.kind === 'wrong' ? 'What does the contract really say?' : 'Edit this item'}</b><label htmlFor="editbox" className="vh">Correct value</label><input id="editbox" value={s.editVal} onChange={e => set({ editVal: e.target.value })} placeholder="For example, $5,000" /><div className="acts"><button className="b pri" onClick={saveEdit}>Save <kbd>↵</kbd></button><button className="b q" onClick={() => set({ edit: null })}>Cancel</button></div></div>}
@@ -135,8 +139,8 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
       <span className="wm">ContraClear</span><span className="ttl">{s.view === 'doc' ? c.name : s.view === 'home' ? 'Next 30 days' : 'Library'}</span>
       <button className="cmdb" onClick={() => openCmd()} aria-label="Search all contracts or run a command (Control or Command K)"><Search size={18} aria-hidden /><span className="lbl" style={{ flex: 1, textAlign: 'left' }}>Search all contracts or do anything</span><kbd>⌘K</kbd></button>
       <div className="tr">
-        <button className="b q" onClick={() => set({ pop: s.pop === 'eng' ? '' : 'eng' })} aria-haspopup="true" aria-expanded={s.pop === 'eng'}>Rules only (free)<ChevronDown size={16} aria-hidden /></button>
-        {s.pop === 'eng' && <div className="pop" role="menu" aria-label="How items are checked">{([['rules', 'Rules only (free)', 'Fast pattern check. With one check, every item waits for you.'], ['device', 'On-device AI (free)', 'A small AI in this browser. Slower, nothing leaves. Not in this version yet.'], ['cloud', 'Cloud AI with your own key (pennies)', 'Your provider reads masked clauses. Not in this version yet.']] as const).map(g => <button key={g[0]} className="opt" role="menuitemradio" aria-checked={g[0] === 'rules'} onClick={() => pickEngine(g[0])}>{g[0] === 'rules' ? <CircleCheck size={20} aria-hidden /> : <Circle size={20} aria-hidden />}<div><b>{g[1]}</b><span>{g[2]}</span></div></button>)}</div>}
+        <button className="b q" onClick={() => set({ pop: s.pop === 'eng' ? '' : 'eng' })} aria-haspopup="true" aria-expanded={s.pop === 'eng'}>{eng === 'cloud' ? 'Cloud AI, your key' : 'Rules only (free)'}<ChevronDown size={16} aria-hidden /></button>
+        {s.pop === 'eng' && <div className="pop" role="menu" aria-label="How items are checked">{([['rules', 'Rules only (free)', 'Fast pattern check. With one check, every item waits for you.'], ['device', 'On-device AI (free)', 'A small AI in this browser. Slower, nothing leaves. Not in this version yet.'], ['cloud', 'Cloud AI with your own key (pennies)', 'Rules plus your provider. Masked first, and you approve every send.']] as const).map(g => <button key={g[0]} className="opt" role="menuitemradio" aria-checked={g[0] === eng} onClick={() => pickEngine(g[0])}>{g[0] === eng ? <CircleCheck size={20} aria-hidden /> : <Circle size={20} aria-hidden />}<div><b>{g[1]}</b><span>{g[2]}</span></div></button>)}</div>}
         <button className="b" onClick={() => set({ pop: s.pop === 'exp' ? '' : 'exp' })} aria-haspopup="true" aria-expanded={s.pop === 'exp'}><Download size={18} aria-hidden />Export</button>
         {s.pop === 'exp' && <div className="pop" role="menu" aria-label="Export">
           <button className="opt" role="menuitem" onClick={exportCsv}><FileText size={20} aria-hidden /><div><b>CSV</b><span>Every item with its quote and page. Opens in Excel or Sheets.</span></div></button>
@@ -148,6 +152,7 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
         <button className="ib" onClick={() => set({ panel: 'settings', pop: '' })} aria-label="Settings" title="Settings"><Cog size={20} aria-hidden /></button>
       </div>
     </header>
+    {eng === 'cloud' && <div className="cbanner" role="status"><Cloud size={18} aria-hidden /><span><b>Cloud AI is on.</b> Only masked text goes to your provider, and only when you approve.</span>{s.view === 'doc' && toSend > 0 && <button className="b" onClick={() => set({ panel: 'cloud' })}>Review what would be sent ({toSend})</button>}<button className="b q" onClick={() => pickEngine('rules')}>Turn off</button></div>}
     <section className="tls" aria-label="Next 90 days">
       <div className="tsum"><span className="faint">Next 90 days{s.view === 'doc' ? '' : ' · all contracts'}</span><br /><b className="num">{st.total} due</b><br /><span className="num">{st.payDays} {st.payDays === 1 ? 'payment day' : 'payment days'}{st.cancel ? ` · cancel by ${st.cancel}` : ''}</span></div>
       <div className="track"><div className="ln" /><span className="today">Today</span>
@@ -250,7 +255,8 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
     {s.panel === 'portfolio' && <PortfolioPanel cs={lib} onClose={() => set({ panel: '' })} onOpen={open} />}
     {s.panel === 'settings' && <SettingsPanel s={db.settings} set={p => setDb(d => ({ ...d, settings: { ...d.settings, ...p } }))} onClose={() => set({ panel: '' })} onEngine={() => set({ panel: '', pop: 'eng' })} onSignOut={onSignOut} onDelete={() => { set({ panel: '' }); onDelete(); }} />}
     {s.panel === 'files' && <FilesPanel onClose={() => set({ panel: '' })} />}
-    {(s.panel === 'device' || s.panel === 'cloud') && <EnginePanel which={s.panel} onClose={() => set({ panel: '' })} />}
+    {s.panel === 'device' && <EnginePanel onClose={() => set({ panel: '' })} />}
+    {s.panel === 'cloud' && <CloudPanel c={c} aiKey={db.aiKey || ''} onKey={k => setDb(d => ({ ...d, aiKey: k }))} onClose={() => set({ panel: '' })} onDone={(nc, msg) => { upd(() => nc); set({ panel: '', sel: 0 }); say(msg); }} />}
     {s.panel === 'share' && <SharePanel onClose={() => set({ panel: '' })} say={say} onImport={(d, mode) => { setDb(o => mode === 'replace' ? d : { ...o, contracts: [...o.contracts, ...d.contracts.filter(x => !o.contracts.some(y => y.id === x.id))] }); if (mode === 'replace' && d.contracts[0]) setActive(d.contracts[0].id); say(mode === 'replace' ? 'Vault replaced with the file.' : 'Merged. Contracts already here were kept as they are.'); }} />}
     {toast && <div className="toast" role="status">{toast.m}{toast.undo && <button onClick={toast.undo} style={{ marginLeft: 12, background: 'none', border: 0, color: '#fff', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600, minHeight: 32 }}>Undo</button>}</div>}
   </div>;

@@ -69,12 +69,13 @@ Run: `npm install`, `npm run dev`, `npm test`, `npm run build` (static output in
 - Flows 4 to 7, 13, 15: workspace, review, conflict view, formula, trace, track-this, keyboard, 90-day strip, portfolio, preview toolbar, library tree and list, drag to re-file, duplicate merge, Cmd/Ctrl+K search and commands, Next 30 days, the 7 settings.
 - Flow 9 and 10: event preview and `.ics` (stable UIDs, so re-importing updates instead of duplicating), CSV, vault file.
 - Network badge reads a real byte counter (`src/lib/net.ts`); the build ships a CSP that blocks every other origin; fonts are self-hosted.
+- Flow 11 cloud AI with the user's own Anthropic key (`src/lib/ai.ts`, `src/lib/redact.ts`): key stored only in the vault, names/amounts/addresses masked on the device, the exact masked text shown for approval before every send, bytes counted on the badge, banner while on, bad key / provider down / refusal states. The AI never sees the rules answers; `compare()` decides agree (green) or disagree (conflict view). Model: `claude-opus-5-5`. Tested against a stand-in provider only; not yet run with a real key.
 - The design's Brightwell contract is available from Cmd/Ctrl+K as "Open the sample contract". It carries both checks, so it shows conflicts.
 
 **Not built yet (each shows an honest "not in this version" state, never a dead control)**
 - Google sign-in, Drive picker, Google Calendar, Sheets, handover pack (need an OAuth client and Google verification).
 - Email sign-in link and the server-side email record (needs a small backend).
-- On-device AI and cloud AI with redaction preview (so real contracts are "Rules check only" and every item waits for the user).
+- On-device AI (WebLLM). The menu option explains it isn't here yet.
 - OCR for scans, passkeys (WebAuthn PRF), keeping encrypted copies of original files (the setting is stored but nothing is kept).
 - Flow 8 amendments and versions, Flow 14 report a wrong extraction, folder re-scan, meaning-based search.
 

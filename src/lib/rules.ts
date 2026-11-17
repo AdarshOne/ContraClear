@@ -34,20 +34,20 @@ export function runRules(raw: RawPage[], prov: string, lines = false): RulesResu
       const dates = [...s.matchAll(DATE_RE)];
       if (tm && dates.length >= 2 && !termEnd) {
         const end = D(+dates[1][3], monthIndex(dates[1][1]), +dates[1][2]); termEnd = end; termRef = loc(p.n, sec);
-        add(p, sec, s.replace(/,?\s*unless.*$/i, '').replace(/[.;]$/, ''), { kind: 'date', sentence: `The contract runs until ${fmt(end)}.`, value: fmt(end), who: 'Both parties', due: fmt(end), rules: fmt(end), iso: iso(end), cal: 1 });
+        add(p, sec, s.replace(/,?\s*unless.*$/i, '').replace(/[.;]$/, ''), { kind: 'date', sentence: `The contract runs until ${fmt(end)}.`, value: fmt(end), who: 'Both parties', due: fmt(end), rules: fmt(end), iso: iso(end), cal: 1, fact: { iso: iso(end) } });
         continue;
       }
       // Renewal notice: "at least sixty (60) days before the renewal date"
       const dn = daysIn(s);
       if (dn && /\b(?:before|prior to)\b/i.test(s) && /renew|extend|anniversary/i.test(s + ' ' + body) && /notice|cancel|terminat|writing/i.test(s)) {
-        add(p, sec, s.replace(/[.;]$/, ''), { kind: 'date', sentence: '', value: '', who: who ? `${who} gives notice` : 'Either party gives notice', due: '', rules: `${dn.n} days before renewal`, formula: ['__renew__', String(dn.n)] });
+        add(p, sec, s.replace(/[.;]$/, ''), { kind: 'date', sentence: '', value: '', who: who ? `${who} gives notice` : 'Either party gives notice', due: '', rules: `${dn.n} days before renewal`, formula: ['__renew__', String(dn.n)], fact: { days: dn.n } });
         continue;
       }
       // Late interest
       const pct = s.match(/(\d+(?:\.\d+)?)\s*%\)?\s*(?:per|a|each)\s+(month|annum|year)/i);
       if (pct && /late|not paid|overdue|unpaid|interest/i.test(s)) {
         const per = /month/i.test(pct[2]) ? 'month' : 'year';
-        add(p, sec, s, { kind: 'money', sentence: `Pay late and you owe ${pct[1]}% more each ${per}.`, value: `${pct[1]}% a ${per}`, who: 'Whoever pays late', due: 'When a payment is late', rules: `${pct[1]}%` }); continue;
+        add(p, sec, s, { kind: 'money', sentence: `Pay late and you owe ${pct[1]}% more each ${per}.`, value: `${pct[1]}% a ${per}`, who: 'Whoever pays late', due: 'When a payment is late', rules: `${pct[1]}%`, fact: { pct: +pct[1] } }); continue;
       }
       // Amounts
       const am = s.match(/\$\s?(\d[\d,]*(?:\.\d{2})?)/);
@@ -65,6 +65,7 @@ export function runRules(raw: RawPage[], prov: string, lines = false): RulesResu
         const every = monthly ? ' every month' : yearly ? ' every year' : '';
         const isFee = what === 'late fee' || what === 'insurance cover';
         add(p, sec, s.replace(/[.;]$/, ''), {
+          fact: { amt, freq: monthly ? 'monthly' : yearly ? 'yearly' : 'once' },
           kind: 'money', amt: isFee ? undefined : amt, recur: isFee ? undefined : recur, iso: !isFee && anchor && dayKnown ? iso(anchor) : undefined, cal: !isFee && anchor && dayKnown ? 1 : 0,
           sentence: what === 'insurance cover' ? `${who || 'A party'} must carry ${money(amt)} of insurance.` : payer ? `${payer} pays ${money(amt)}${every}${what !== 'amount' ? ` (${what})` : ''}.` : `${money(amt)}${every}${what !== 'amount' ? ` for the ${what}` : ''}. The clause doesn’t say who pays.`,
           value: money(amt), who: payer ? `${payer} pays${payee ? ' ' + payee.replace(/^the\s+/i, '') : ''}` : 'Not stated in this clause', rules: money(amt),
@@ -72,15 +73,15 @@ export function runRules(raw: RawPage[], prov: string, lines = false): RulesResu
           formula: recur && anchor && dayKnown ? [`${recur === 'monthly' ? 'The 1st of each month' : 'The same date each year'} (${loc(p.n, sec)})`, `Today is ${fmt(now)}`, `Next one = ${fmt(anchor)}, a ${dow(anchor)}`] : undefined,
         }); continue;
       }
-      if (/exclusive of[^.]*\b(GST|HST|PST|QST|tax)/i.test(s)) { add(p, sec, s, { kind: 'money', sentence: 'Sales tax is added to every fee.', value: '+ tax', who: 'Whoever pays the fees', due: 'With every invoice', rules: 'exclusive of tax' }); continue; }
+      if (/exclusive of[^.]*\b(GST|HST|PST|QST|tax)/i.test(s)) { add(p, sec, s, { kind: 'money', sentence: 'Sales tax is added to every fee.', value: '+ tax', who: 'Whoever pays the fees', due: 'With every invoice', rules: 'exclusive of tax', fact: { tax: true } }); continue; }
       // Cancel with notice
-      if (dn && /\b(?:cancel|terminat)/i.test(s) && /notice/i.test(s)) { add(p, sec, s, { kind: 'duty', sentence: `${who || 'A party'} can cancel with ${dn.n} ${dn.biz ? 'business ' : ''}days’ notice.`, value: `${dn.n} days’ notice`, who: `${who || 'A party'} gives notice`, due: `Any time, ${dn.n} days ahead`, rules: `${dn.n} days` }); continue; }
+      if (dn && /\b(?:cancel|terminat)/i.test(s) && /notice/i.test(s)) { add(p, sec, s, { kind: 'duty', sentence: `${who || 'A party'} can cancel with ${dn.n} ${dn.biz ? 'business ' : ''}days’ notice.`, value: `${dn.n} days’ notice`, who: `${who || 'A party'} gives notice`, due: `Any time, ${dn.n} days ahead`, rules: `${dn.n} days`, fact: { days: dn.n, biz: dn.biz } }); continue; }
       // A duty with a clock on it
-      if (dn && /\bwithin\b/i.test(s)) { add(p, sec, s, { kind: 'duty', sentence: `${who || 'A party'} must act within ${dn.n} ${dn.biz ? 'business ' : ''}days here.`, value: `${dn.n} ${dn.biz ? 'business ' : ''}days`, who: who || 'A party', due: `${dn.n} ${dn.biz ? 'business ' : ''}days after the trigger`, rules: `${dn.n} ${dn.biz ? 'business ' : ''}days` }); continue; }
+      if (dn && /\bwithin\b/i.test(s)) { add(p, sec, s, { kind: 'duty', sentence: `${who || 'A party'} must act within ${dn.n} ${dn.biz ? 'business ' : ''}days here.`, value: `${dn.n} ${dn.biz ? 'business ' : ''}days`, who: who || 'A party', due: `${dn.n} ${dn.biz ? 'business ' : ''}days after the trigger`, rules: `${dn.n} ${dn.biz ? 'business ' : ''}days`, fact: { days: dn.n, biz: dn.biz } }); continue; }
       // How notices must be sent
       if (/\bnotices?\b/i.test(s) && /\b(?:must|shall)\b/i.test(s) && /email|courier|registered mail|in writing|mail\b/i.test(s)) {
         const how = ['email', 'courier', 'registered mail'].filter(w => new RegExp(w, 'i').test(s)).join(' and ') || 'in writing';
-        add(p, sec, s.replace(/[.;]$/, ''), { kind: 'duty', sentence: `Any notice must go by ${how}.`, value: how[0].toUpperCase() + how.slice(1), who: 'Both parties', due: 'Whenever you send notice', rules: how }); continue;
+        add(p, sec, s.replace(/[.;]$/, ''), { kind: 'duty', sentence: `Any notice must go by ${how}.`, value: how[0].toUpperCase() + how.slice(1), who: 'Both parties', due: 'Whenever you send notice', rules: how, fact: { methods: how.split(' and ') } }); continue;
       }
     }
   }

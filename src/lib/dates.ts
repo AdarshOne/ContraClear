@@ -13,7 +13,8 @@ export const fmtShort = (d: Date) => `${MON[d.getMonth()]} ${d.getDate()}`;
 export const dow = (d: Date) => DOW[d.getDay()];
 export const DATE_RE = /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b/gi;
 export const MD_RE = /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?\b(?!,?\s+\d{4})/i;
-export const parseDate = (s: string): Date | null => { DATE_RE.lastIndex = 0; const m = DATE_RE.exec(s); return m ? D(+m[3], FULL.indexOf(m[1].toLowerCase()), +m[2]) : null; };
+// A fresh, non-global copy: exec on the shared global regex would leave lastIndex behind and break the next matchAll.
+export const parseDate = (s: string): Date | null => { const m = new RegExp(DATE_RE.source, 'i').exec(s); return m ? D(+m[3], FULL.indexOf(m[1].toLowerCase()), +m[2]) : null; };
 export const monthIndex = (name: string) => FULL.indexOf(name.toLowerCase());
 
 const nthMon = (y: number, m: number, n: number) => { const f = D(y, m, 1); return D(y, m, 1 + ((8 - f.getDay()) % 7) + (n - 1) * 7); };

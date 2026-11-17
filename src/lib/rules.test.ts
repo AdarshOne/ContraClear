@@ -24,3 +24,22 @@ test('exports', () => {
   const ev = calEvents([c]); expect(ev.length).toBe(6); const ics = toIcs(ev, '2 weeks and 2 days before');
   expect(ics).toContain('RRULE:FREQ=MONTHLY'); expect(ics.match(/BEGIN:VALARM/g)!.length).toBe(12); expect(toCsv([c]).split('\r\n').length).toBe(16);
 });
+import { makeMasker } from './redact';
+import { applyReadings, buildRequest, type Reading } from './ai';
+import { processInput } from './pipeline';
+test('redaction masks names, amounts and addresses, and round-trips', () => {
+  const m = makeMasker('This is between Brightwell Marketing Inc. (“Provider”) and Northfield Goods Ltd. (“Client”).');
+  const t = m.mask('Client shall pay Brightwell four thousand five hundred dollars ($4,500.00) CAD. Notices to 220 King Street, Toronto M5V 1K4 or billing@brightwell.ca.');
+  expect(t).not.toMatch(/Brightwell|4,500|King Street|M5V|billing@/); expect(t).toContain('[PARTY A]'); expect(t).toContain('[AMOUNT 1]'); expect(t).toContain('[ADDRESS 1]');
+  expect(m.unmask('[AMOUNT 1]')).toContain('$4,500.00');
+});
+test('AI readings are compared with the rules check', async () => {
+  const c = await processInput({ name: 'x.pdf', src: 't', raw }, { prov: 'Ontario', rem: '', lock: '', copies: false, eng: 'cloud' }, () => {}, async () => {});
+  const req = buildRequest(c); expect(req.user).not.toMatch(/Brightwell|\$\d/); expect(req.ids.length).toBe(c.items.length);
+  const base = { found: true, payer: 'Client', amount: null, frequency: 'none', date: null, days: null, business_days: false, percent: null, tax_extra: false, notice_methods: [], summary: 's' } as Omit<Reading, 'id'>;
+  const ret = c.items.find(i => /\$4,500/.test(i.sentence) && i.fact?.freq === 'monthly')!, term = c.items.find(i => /runs until/.test(i.sentence))!, ren = c.items.find(i => /stop it renewing/.test(i.sentence))!;
+  const amtTok = req.user.match(new RegExp(`Clause ${ret.id}\\n[^]*?(\\[AMOUNT \\d+\\])`))![1];
+  const out = applyReadings(c, req, [{ ...base, id: ret.id, amount: amtTok, frequency: 'monthly' }, { ...base, id: term.id, date: '2027-02-27' }, { ...base, id: ren.id, days: 60 }]);
+  const get = (id: number) => out.contract.items.find(i => i.id === id)!;
+  expect(get(ret.id).k).toBe('g'); expect(get(ren.id).k).toBe('g'); expect(get(term.id).k).toBe('y'); expect(get(term.id).conf![1].v).toBe('Feb 27, 2027'); expect(out.agreed).toBe(2);
+});
