@@ -62,7 +62,8 @@ Run: `npm install`, `npm run dev`, `npm test`, `npm run build` (static output in
 
 **Built and working**
 - Flow 1 sign-in screen (email is stored on this device only; there is no server yet).
-- Flow 12 vault: passphrase, one-time recovery key, unlock, wrong passphrase, recovery-key reset, auto-lock countdown, lock button, export/import vault file (merge or replace), delete everything, storage-blocked and corrupt states. AES-GCM + PBKDF2 in IndexedDB (`src/lib/vault.ts`).
+- Sign-in: passkey (primary), Google (shows "not set up yet" until there is an OAuth client), or email. There is no passphrase.
+- Flow 12 vault: locked by a passkey through the WebAuthn PRF extension (HKDF → AES-GCM key wrap), plus a one-time recovery key (PBKDF2). If a device can't make a PRF passkey, the user can continue with a device key (non-extractable, stored in IndexedDB): encrypted at rest but opens on that browser profile without a secret, and the screen says so. Unlock, cancelled/wrong passkey, recovery key → new passkey, old passphrase vaults open once with the recovery key, auto-lock countdown, lock button, export/import vault file locked with a one-time share code (merge or replace), delete everything, storage-blocked and corrupt states. AES-GCM + PBKDF2 in IndexedDB (`src/lib/vault.ts`).
 - Flow 2 Drop state: whole-window drop, choose files, device folder with checklist, paste text, and the error states (.doc, wrong type, too large, too many pages, password PDF, French, scan, damaged).
 - Flow 3 processing driven by real pipeline events, skip, cancel, batch queue with pause.
 - Rules check (`src/lib/rules.ts`): amounts, recurring payments, term, renewal cancel-by with business days and provincial holidays, late interest, tax, notice periods, notice method, plus real "Not found" results.
@@ -77,7 +78,7 @@ Run: `npm install`, `npm run dev`, `npm test`, `npm run build` (static output in
 - Email sign-in link and the server-side email record (needs a small backend).
 - Cloud AI with your own key: removed on purpose (no Claude or other provider APIs). The menu option says it isn't in this version. An earlier implementation is in git history (commit 6ce923f).
 - A downloadable on-device language model (WebLLM). The current on-device engine is classical ML instead.
-- OCR for scans, passkeys (WebAuthn PRF), keeping encrypted copies of original files (the setting is stored but nothing is kept).
+- OCR for scans, keeping encrypted copies of original files (the setting is stored but nothing is kept).
 - Flow 8 amendments and versions, Flow 14 report a wrong extraction, folder re-scan, meaning-based search.
 
 **Deviations from the suggested architecture**

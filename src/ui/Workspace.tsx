@@ -150,7 +150,7 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
         {s.pop === 'exp' && <div className="pop" role="menu" aria-label="Export">
           <button className="opt" role="menuitem" onClick={exportCsv}><FileText size={20} aria-hidden /><div><b>CSV</b><span>Every item with its quote and page. Opens in Excel or Sheets.</span></div></button>
           <button className="opt" role="menuitem" onClick={openCal}><Calendar size={20} aria-hidden /><div><b>Calendar file (.ics)</b><span>Confirmed dates only, with a preview first.</span></div></button>
-          <button className="opt" role="menuitem" onClick={() => set({ pop: '', panel: 'share' })}><KeyRound size={20} aria-hidden /><div><b>Encrypted vault file</b><span>To share with a teammate, or to import one. Send the passphrase separately.</span></div></button>
+          <button className="opt" role="menuitem" onClick={() => set({ pop: '', panel: 'share' })}><KeyRound size={20} aria-hidden /><div><b>Encrypted vault file</b><span>To share with a teammate, or to import one. Send the share code separately.</span></div></button>
           <button className="opt" role="menuitem" onClick={() => { set({ pop: '' }); say('Google Sheets and the handover pack need Google, which isn’t connected on this copy yet. CSV has the same rows.'); }}><FileSpreadsheet size={20} aria-hidden /><div><b>Google Sheets and handover pack</b><span>Not connected on this copy yet. Use CSV for now.</span></div></button>
         </div>}
         <button className="ib" onClick={onLock} aria-label="Lock vault" title="Lock vault"><Lock size={20} aria-hidden /></button>

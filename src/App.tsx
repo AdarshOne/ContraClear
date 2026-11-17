@@ -61,7 +61,7 @@ export function App() {
   if (phase === 'corrupt') return <Notice title="This vault can’t be read." body="Its data on this device is damaged. You can start a new vault, then import a vault file if you exported one."><button className="b pri" onClick={async () => { await vault.destroy(); setHasVault(false); setPhase('setup'); }}>Start a new vault</button></Notice>;
   if (phase === 'deleted') return <Notice title="Everything is deleted." body="Your vault and email record are gone."><button className="b pri" autoFocus onClick={() => setPhase('welcome')}>Start again</button></Notice>;
   if (phase === 'signedout') return <Notice title="You’ve been signed out." body="Your vault is safe and still locked on this device."><button className="b pri" autoFocus onClick={() => setPhase('welcome')}>Sign in again</button></Notice>;
-  if (phase === 'welcome') return <Welcome hasVault={hasVault} onDone={() => setPhase(hasVault ? 'locked' : 'setup')} onOpenVault={() => setPhase('locked')} />;
+  if (phase === 'welcome') return <Welcome hasVault={hasVault} onDone={() => setPhase(hasVault ? 'locked' : 'setup')} onPasskey={async () => { if (!hasVault) return setPhase('setup'); try { await vault.unlock(); await enter(); } catch (e: any) { if (e.message === 'legacy') return setPhase('locked'); if (e.message === 'corrupt') return setPhase('corrupt'); return e.message === 'wrong' ? 'That passkey didn’t open this vault. Use the passkey you made for ContraClear.' : 'The passkey check was cancelled. Nothing changed.'; } }} />;
   if (phase === 'setup') return <Setup onReady={enter} />;
   if (phase === 'locked') return <Locked onOpen={enter} onCorrupt={() => setPhase('corrupt')} />;
 
