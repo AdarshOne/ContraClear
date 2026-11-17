@@ -11,8 +11,11 @@ export interface Item {
   iso?: string; recur?: 'monthly' | 'yearly'; amt?: number;
   /** What the rules check read, in a form the AI check can be compared against. */
   fact?: Fact;
+  /** Why the on-device check could not vouch for this item, when it couldn't. */
+  aiNote?: string;
 }
-export interface Fact { amt?: number; freq?: 'monthly' | 'yearly' | 'once'; iso?: string; days?: number; biz?: boolean; pct?: number; tax?: boolean; methods?: string[] }
+export type Cls = 'payment' | 'late' | 'tax' | 'term' | 'renewal' | 'cancel' | 'deadline' | 'notice' | 'insurance' | 'other';
+export interface Fact { cls: Cls; amt?: number; freq?: 'monthly' | 'yearly' | 'once'; iso?: string; days?: number; biz?: boolean; pct?: number; tax?: boolean; methods?: string[] }
 export interface NotFound { t: string; d: string; s: string }
 export interface Tracked { id: number; kind: string; title: string; who: string; rem: string; txt: string; page: number }
 export interface Contract {
@@ -22,8 +25,8 @@ export interface Contract {
   hist: Record<number, string[]>; pick: Record<number, number>; accepted: boolean; tracked: Tracked[];
 }
 export interface Settings { prov: string; rem: string; lock: string; copies: boolean; eng: 'rules' | 'device' | 'cloud' }
-export interface Db { contracts: Contract[]; settings: Settings; cpo: Record<string, string>; calPrompt: boolean; recent: string[]; /** The user's own AI key. Lives only inside the encrypted vault. */ aiKey?: string }
-export const emptyDb = (): Db => ({ contracts: [], settings: { prov: 'Ontario', rem: '2 weeks and 2 days before', lock: '15 minutes', copies: false, eng: 'rules' }, cpo: {}, calPrompt: true, recent: [] });
+export interface Db { contracts: Contract[]; settings: Settings; cpo: Record<string, string>; calPrompt: boolean; recent: string[] }
+export const emptyDb = (): Db => ({ contracts: [], settings: { prov: 'Ontario', rem: '2 weeks and 2 days before', lock: '15 minutes', copies: false, eng: 'device' }, cpo: {}, calPrompt: true, recent: [] });
 export const COL: Record<K, [string, string, string]> = {
   g: ['#1E7B3A', '#EAF5EE', 'Both checks agree'], y: ['#A66F00', '#FFF4D6', 'Checks disagree: please confirm'],
   o: ['#A66F00', '#FFF4D6', 'Rules check only: please confirm'], r: ['#C62828', '#FCE9E8', 'Couldn’t verify'],

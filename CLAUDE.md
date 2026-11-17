@@ -69,13 +69,14 @@ Run: `npm install`, `npm run dev`, `npm test`, `npm run build` (static output in
 - Flows 4 to 7, 13, 15: workspace, review, conflict view, formula, trace, track-this, keyboard, 90-day strip, portfolio, preview toolbar, library tree and list, drag to re-file, duplicate merge, Cmd/Ctrl+K search and commands, Next 30 days, the 7 settings.
 - Flow 9 and 10: event preview and `.ics` (stable UIDs, so re-importing updates instead of duplicating), CSV, vault file.
 - Network badge reads a real byte counter (`src/lib/net.ts`); the build ships a CSP that blocks every other origin; fonts are self-hosted.
-- Flow 11 cloud AI with the user's own Anthropic key (`src/lib/ai.ts`, `src/lib/redact.ts`): key stored only in the vault, names/amounts/addresses masked on the device, the exact masked text shown for approval before every send, bytes counted on the badge, banner while on, bad key / provider down / refusal states. The AI never sees the rules answers; `compare()` decides agree (green) or disagree (conflict view). Model: `claude-opus-5-5`. Tested against a stand-in provider only; not yet run with a real key.
+- Flow 11 on-device AI (`src/lib/second.ts`, `src/lib/corpus.ts`): the default engine. No download, nothing sent. A Naive Bayes clause classifier trained in the browser on generated sentences, a second reader that parses the written-out words ("sixty (60) days") and uses token proximity, and amendment resolution ("Section 9.2 is changed to..."). An item is "Both checks agree" only if the clause kind matches, the value matches, and the value had separate evidence in the text; otherwise it waits for the user. Switching engines re-checks unreviewed items. It is not a language model: it cannot judge meaning beyond these checks.
 - The design's Brightwell contract is available from Cmd/Ctrl+K as "Open the sample contract". It carries both checks, so it shows conflicts.
 
 **Not built yet (each shows an honest "not in this version" state, never a dead control)**
 - Google sign-in, Drive picker, Google Calendar, Sheets, handover pack (need an OAuth client and Google verification).
 - Email sign-in link and the server-side email record (needs a small backend).
-- On-device AI (WebLLM). The menu option explains it isn't here yet.
+- Cloud AI with your own key: removed on purpose (no Claude or other provider APIs). The menu option says it isn't in this version. An earlier implementation is in git history (commit 6ce923f).
+- A downloadable on-device language model (WebLLM). The current on-device engine is classical ML instead.
 - OCR for scans, passkeys (WebAuthn PRF), keeping encrypted copies of original files (the setting is stored but nothing is kept).
 - Flow 8 amendments and versions, Flow 14 report a wrong extraction, folder re-scan, meaning-based search.
 

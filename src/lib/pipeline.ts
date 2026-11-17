@@ -3,8 +3,9 @@ import type { Contract, Settings } from './types';
 import { readFile, linesFromText, ReadError } from './read';
 import { runRules, type RawPage } from './rules';
 import { today, iso } from './dates';
+import { secondCheck } from './second';
 export const STAGES = ['Reading the pages', 'Finding the clauses', 'Checking dates and amounts (rules)', 'Asking the AI about the important clauses only', 'Comparing both checks', 'Working out the real deadlines'];
-export interface Progress { stage: number; pages?: number; money?: number; dates?: number; duties?: number; formula?: string; aiOff?: boolean; aiWait?: boolean }
+export interface Progress { stage: number; pages?: number; money?: number; dates?: number; duties?: number; formula?: string; aiOff?: boolean; agreed?: number }
 export interface Input { name: string; file?: File; text?: string; src: string; password?: string; raw?: RawPage[] }
 const uid = () => crypto.randomUUID();
 export const blankState = () => ({ conf: {}, dis: {}, hist: {}, pick: {}, accepted: false, tracked: [] });
@@ -18,13 +19,15 @@ export async function processInput(inp: Input, s: Settings, on: (p: Progress) =>
   const r = runRules(raw, s.prov, lines);
   const count = { money: r.items.filter(i => i.kind === 'money').length, dates: r.items.filter(i => i.kind === 'date').length, duties: r.items.filter(i => i.kind === 'duty').length };
   await step({ stage: 2, pages: raw.length, ...count });
-  // The AI check never runs here: cloud AI needs the user's approval of the masked text first (in the workspace),
-  // so this stage reports itself as off or waiting rather than pretending.
-  const aiWait = s.eng === 'cloud';
-  await step({ stage: 3, pages: raw.length, ...count, aiOff: true, aiWait });
-  await step({ stage: 4, pages: raw.length, ...count, aiOff: true, aiWait });
+  // The AI check runs only with the on-device engine. In Rules only these two stages report themselves as off.
+  const aiOff = s.eng !== 'device';
+  let c: Contract = { id: uid(), name: '', cp: r.cp, type: r.type, year: r.year, src: inp.src, files: [inp.name], pages: r.pages, items: r.items, nf: r.nf, added: iso(today()), lines, ...blankState() };
+  await step({ stage: 3, pages: raw.length, ...count, aiOff });
+  let agreed: number | undefined;
+  if (!aiOff) { const out = secondCheck(c); c = out.contract; agreed = out.agreed; }
+  await step({ stage: 4, pages: raw.length, ...count, aiOff, agreed });
   const f = r.items.find(i => i.formula && i.kind === 'date');
-  await step({ stage: 5, pages: raw.length, ...count, aiOff: true, aiWait, formula: f?.formula?.[2] });
+  await step({ stage: 5, pages: raw.length, ...count, aiOff, agreed, formula: f?.formula?.[2] });
   const title = raw[0].h && raw[0].h.length > 3 && !lines ? raw[0].h : inp.name.replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g, ' ');
-  return { id: uid(), name: title.slice(0, 60), cp: r.cp, type: r.type, year: r.year, src: inp.src, files: [inp.name], pages: r.pages, items: r.items, nf: r.nf, added: iso(today()), lines, ...blankState() };
+  return { ...c, name: title.slice(0, 60) };
 }

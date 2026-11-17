@@ -24,22 +24,25 @@ test('exports', () => {
   const ev = calEvents([c]); expect(ev.length).toBe(6); const ics = toIcs(ev, '2 weeks and 2 days before');
   expect(ics).toContain('RRULE:FREQ=MONTHLY'); expect(ics.match(/BEGIN:VALARM/g)!.length).toBe(12); expect(toCsv([c]).split('\r\n').length).toBe(16);
 });
-import { makeMasker } from './redact';
-import { applyReadings, buildRequest, type Reading } from './ai';
+import { classify, reread, secondCheck, wordsToNumber, datesIn } from './second';
 import { processInput } from './pipeline';
-test('redaction masks names, amounts and addresses, and round-trips', () => {
-  const m = makeMasker('This is between Brightwell Marketing Inc. (“Provider”) and Northfield Goods Ltd. (“Client”).');
-  const t = m.mask('Client shall pay Brightwell four thousand five hundred dollars ($4,500.00) CAD. Notices to 220 King Street, Toronto M5V 1K4 or billing@brightwell.ca.');
-  expect(t).not.toMatch(/Brightwell|4,500|King Street|M5V|billing@/); expect(t).toContain('[PARTY A]'); expect(t).toContain('[AMOUNT 1]'); expect(t).toContain('[ADDRESS 1]');
-  expect(m.unmask('[AMOUNT 1]')).toContain('$4,500.00');
+test('number words', () => {
+  expect(wordsToNumber('four thousand five hundred')).toBe(4500); expect(wordsToNumber('six hundred twenty')).toBe(620); expect(wordsToNumber('one and one-half')).toBe(1.5); expect(wordsToNumber('seventy-five')).toBe(75);
+  expect(datesIn('from 1 March 2026 until 2027-02-28')).toEqual(['2026-03-01', '2027-02-28']);
 });
-test('AI readings are compared with the rules check', async () => {
-  const c = await processInput({ name: 'x.pdf', src: 't', raw }, { prov: 'Ontario', rem: '', lock: '', copies: false, eng: 'cloud' }, () => {}, async () => {});
-  const req = buildRequest(c); expect(req.user).not.toMatch(/Brightwell|\$\d/); expect(req.ids.length).toBe(c.items.length);
-  const base = { found: true, payer: 'Client', amount: null, frequency: 'none', date: null, days: null, business_days: false, percent: null, tax_extra: false, notice_methods: [], summary: 's' } as Omit<Reading, 'id'>;
-  const ret = c.items.find(i => /\$4,500/.test(i.sentence) && i.fact?.freq === 'monthly')!, term = c.items.find(i => /runs until/.test(i.sentence))!, ren = c.items.find(i => /stop it renewing/.test(i.sentence))!;
-  const amtTok = req.user.match(new RegExp(`Clause ${ret.id}\\n[^]*?(\\[AMOUNT \\d+\\])`))![1];
-  const out = applyReadings(c, req, [{ ...base, id: ret.id, amount: amtTok, frequency: 'monthly' }, { ...base, id: term.id, date: '2027-02-27' }, { ...base, id: ren.id, days: 60 }]);
-  const get = (id: number) => out.contract.items.find(i => i.id === id)!;
-  expect(get(ret.id).k).toBe('g'); expect(get(ren.id).k).toBe('g'); expect(get(term.id).k).toBe('y'); expect(get(term.id).conf![1].v).toBe('Feb 27, 2027'); expect(out.agreed).toBe(2);
+test('re-reading catches what patterns miss', () => {
+  expect(reread({ cls: 'payment', amt: 650, freq: 'monthly' }, 'Client shall pay a monthly lease charge of six hundred fifteen dollars ($650.00)').note).toContain('words say $615');
+  expect(reread({ cls: 'deadline', days: 5, biz: false }, 'within five (5) business days').agree).toBe(false);
+  expect(reread({ cls: 'payment', amt: 1200, freq: 'monthly' }, 'an annual fee of $1,200 payable in the first month').agree).toBe(false);
+  expect(reread({ cls: 'late', pct: 1.5 }, 'interest at one and one-half percent (1.5%) per month').agree).toBe(true);
+});
+test('classifier on held-out clauses, and the full on-device check', async () => {
+  const c = await processInput({ name: 'x.pdf', src: 't', raw }, { prov: 'Ontario', rem: '', lock: '', copies: false, eng: 'rules' }, () => {}, async () => {});
+  const hit = c.items.filter(i => classify(i.quote)[0].cls === i.fact!.cls).length; console.log(`classifier top-1 on Brightwell: ${hit}/${c.items.length}`, c.items.filter(i => classify(i.quote)[0].cls !== i.fact!.cls).map(i => `${i.fact!.cls}->${classify(i.quote)[0].cls}: ${i.quote.slice(0, 50)}`));
+  expect(hit / c.items.length).toBeGreaterThan(0.8);
+  expect(classify('This Agreement is governed by the laws of Ontario.')[0].cls).toBe('other');
+  const out = secondCheck(c); const lease = out.contract.items.find(i => /\$650/.test(i.sentence))!;
+  console.log(`on-device check: ${out.agreed} agree, ${out.differ} differ`, out.contract.items.filter(i => i.k !== 'g').map(i => `${i.sentence.slice(0, 40)} | ai: ${i.ai}`));
+  expect(lease.k).toBe('y'); expect(lease.conf![1].v).toBe('$620'); expect(lease.conf![1].ref).toContain('p. 18');
+  expect(out.contract.items.find(i => /stop it renewing/.test(i.sentence))!.k).toBe('g'); expect(out.agreed).toBeGreaterThan(10);
 });
