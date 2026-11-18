@@ -58,7 +58,9 @@ This repo starts from a finished design. **The design is the spec.** Build what 
 - Google OAuth verification status; the "unverified app" copy is already designed.
 
 ## Build status (keep this current)
-Run: `npm install`, `npm run dev`, `npm test`, `npm run build` (static output in `dist/`).
+Run: `npm install`, `npm run dev` (open http://localhost:5173/contraclear/), `npm test`, `npm run build`.
+
+**Hosting (adarshsharma.ca handoff):** the app is served at `https://adarshsharma.ca/contraclear/`, which the main site (a separate repo, don't touch it) proxies to this app's own Cloudflare Pages deployment, path unchanged. So Vite `base` is `/contraclear/` and the build goes to `dist/contraclear/`; `scripts/pages.mjs` writes `dist/_redirects` (`/` → `/contraclear/`) and `dist/_headers`. Deploy the whole `dist/` folder. Signed-out screens wear the main site's nav and footer (`src/ui/SiteChrome.tsx`, scoped CSS in `src/ui/chrome.css`, fonts self-hosted, not Google Fonts). Signed in, there is no nav/footer, only the top-left "ContraClear home" button. Only the landing is indexable; every other screen sets `noindex`. No server code, no API routes, no cookies.
 
 **Built and working**
 - Flow 1 sign-in screen (email is stored on this device only; there is no server yet).

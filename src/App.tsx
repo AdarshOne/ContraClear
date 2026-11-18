@@ -12,6 +12,8 @@ import { auth, Locked, Notice, Setup, Welcome } from './ui/Gate';
 import { Drop, Processing, type Job } from './ui/Add';
 import { Workspace } from './ui/Workspace';
 import { DeletePanel } from './ui/Panels';
+import { SiteChrome } from './ui/SiteChrome';
+import { ArrowLeft } from 'lucide-react';
 
 type Phase = 'boot' | 'unsupported' | 'blocked' | 'welcome' | 'setup' | 'locked' | 'app' | 'deleted' | 'corrupt' | 'signedout';
 const LOCK_MS: Record<string, number> = { '5 minutes': 3e5, '15 minutes': 9e5, '1 hour': 36e5 };
@@ -55,18 +57,29 @@ export function App() {
     addEventListener('dragenter', enterD); addEventListener('dragleave', leave); addEventListener('dragover', overD); addEventListener('drop', drop);
     return () => { removeEventListener('dragenter', enterD); removeEventListener('dragleave', leave); removeEventListener('dragover', overD); removeEventListener('drop', drop); }; }, [phase]);
 
-  if (phase === 'boot') return <main className="full" aria-busy="true"><span className="spin" role="status" aria-label="Opening ContraClear" /></main>;
-  if (phase === 'unsupported') return <Notice title="This browser can’t run ContraClear." body="It needs secure storage that this browser doesn’t have. Try the latest Chrome, Edge, Firefox or Safari." />;
-  if (phase === 'blocked') return <Notice title="This browser is blocking storage." body="Private windows and some settings stop ContraClear from saving your vault. Open a normal window, or allow site data for this page."><button className="b pri" onClick={() => location.reload()}>Try again</button></Notice>;
-  if (phase === 'corrupt') return <Notice title="This vault can’t be read." body="Its data on this device is damaged. You can start a new vault, then import a vault file if you exported one."><button className="b pri" onClick={async () => { await vault.destroy(); setHasVault(false); setPhase('setup'); }}>Start a new vault</button></Notice>;
-  if (phase === 'deleted') return <Notice title="Everything is deleted." body="Your vault and email record are gone."><button className="b pri" autoFocus onClick={() => setPhase('welcome')}>Start again</button></Notice>;
-  if (phase === 'signedout') return <Notice title="You’ve been signed out." body="Your vault is safe and still locked on this device."><button className="b pri" autoFocus onClick={() => setPhase('welcome')}>Sign in again</button></Notice>;
-  if (phase === 'welcome') return <Welcome hasVault={hasVault} onDone={() => setPhase(hasVault ? 'locked' : 'setup')} onPasskey={async () => { if (!hasVault) return setPhase('setup'); try { await vault.unlock(); await enter(); } catch (e: any) { if (e.message === 'legacy') return setPhase('locked'); if (e.message === 'corrupt') return setPhase('corrupt'); return e.message === 'wrong' ? 'That passkey didn’t open this vault. Use the passkey you made for ContraClear.' : 'The passkey check was cancelled. Nothing changed.'; } }} />;
-  if (phase === 'setup') return <Setup onReady={enter} />;
-  if (phase === 'locked') return <Locked onOpen={enter} onCorrupt={() => setPhase('corrupt')} />;
+  // Keep signed-in screens out of search results; only the landing page is indexable.
+  useEffect(() => { let m = document.querySelector<HTMLMetaElement>('meta[name=robots]'); if (phase === 'welcome') { m?.remove(); return; } if (!m) { m = document.createElement('meta'); m.name = 'robots'; document.head.appendChild(m); } m.content = 'noindex'; }, [phase]);
+  useEffect(() => { document.body.classList.toggle('has-home', phase === 'app'); }, [phase]);
+  const pub = (() => {
+    if (phase === 'boot') return <main className="full" aria-busy="true"><span className="spin" role="status" aria-label="Opening ContraClear" /></main>;
+    if (phase === 'unsupported') return <Notice title="This browser can’t run ContraClear." body="It needs secure storage that this browser doesn’t have. Try the latest Chrome, Edge, Firefox or Safari." />;
+    if (phase === 'blocked') return <Notice title="This browser is blocking storage." body="Private windows and some settings stop ContraClear from saving your vault. Open a normal window, or allow site data for this page."><button className="b pri" onClick={() => location.reload()}>Try again</button></Notice>;
+    if (phase === 'corrupt') return <Notice title="This vault can’t be read." body="Its data on this device is damaged. You can start a new vault, then import a vault file if you exported one."><button className="b pri" onClick={async () => { await vault.destroy(); setHasVault(false); setPhase('setup'); }}>Start a new vault</button></Notice>;
+    if (phase === 'deleted') return <Notice title="Everything is deleted." body="Your vault and email record are gone."><button className="b pri" autoFocus onClick={() => setPhase('welcome')}>Start again</button></Notice>;
+    if (phase === 'signedout') return <Notice title="You’ve been signed out." body="Your vault is safe and still locked on this device."><button className="b pri" autoFocus onClick={() => setPhase('welcome')}>Sign in again</button></Notice>;
+    if (phase === 'welcome') return <Welcome hasVault={hasVault} onDone={() => setPhase(hasVault ? 'locked' : 'setup')} onPasskey={async () => { if (!hasVault) return setPhase('setup'); try { await vault.unlock(); await enter(); } catch (e: any) { if (e.message === 'legacy') return setPhase('locked'); if (e.message === 'corrupt') return setPhase('corrupt'); return e.message === 'wrong' ? 'That passkey didn’t open this vault. Use the passkey you made for ContraClear.' : 'The passkey check was cancelled. Nothing changed.'; } }} />;
+    if (phase === 'setup') return <Setup onReady={enter} />;
+    if (phase === 'locked') return <Locked onOpen={enter} onCorrupt={() => setPhase('corrupt')} />;
+    return null;
+  })();
+  if (pub) return phase === 'boot' ? pub : <SiteChrome>{pub}</SiteChrome>;
 
   const has = db.contracts.length > 0, showWs = screen === 'ws' && has;
+  // Signed in: no site nav or footer, just a small way back to the app's home. It stays inside the app
+  // (a full page load would lock the vault), and works as a normal link if opened in a new tab.
+  const goHome = (e: React.MouseEvent) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); if (dbRef.current.contracts.length) openWs(undefined, true); else setScreen('drop'); };
   return <>
+    <a className="cc-home" href={import.meta.env.BASE_URL} aria-label="ContraClear home" onClick={goHome}><ArrowLeft size={18} aria-hidden /><span>ContraClear</span></a>
     {count > 0 && <div className="sbar" role="status" style={{ position: 'fixed', zIndex: 96 }}>Locking in <b className="num">0:{String(count).padStart(2, '0')}</b> because you’ve been away.<button className="b" onClick={() => { last.current = Date.now(); setCount(0); }}>Stay unlocked</button></div>}
     {saveErr && <div className="sbar" role="alert" style={{ position: 'fixed', zIndex: 96 }}>This device is out of space for ContraClear. New changes can’t be saved. Export a vault file, then remove old contracts.</div>}
     {showWs ? <Workspace key={wsKey.n} db={db} setDb={setDb} active={active} setActive={setActive} startHome={wsKey.home} onAdd={() => setScreen('drop')} onLock={lock} onDelete={() => setDel(true)}
