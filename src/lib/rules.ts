@@ -3,7 +3,7 @@
 import type { Item, NotFound, Page } from './types';
 import { DATE_RE, MD_RE, D, addDays, businessOnOrBefore, dow, fmt, iso, monthIndex, nextOccurrence, parseDate, today } from './dates';
 
-export interface RawPage { n: number; file: string; h: string; paras: string[] }
+export interface RawPage { n: number; file: string; h: string; paras: string[]; /** OCR confidence 0–1, scanned pages only */ quality?: number }
 export interface RulesResult { pages: Page[]; items: Item[]; nf: NotFound[]; cp: string; type: string; year: string }
 
 const WORDNUM: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, ten: 10, fifteen: 15, thirty: 30, sixty: 60, ninety: 90 };

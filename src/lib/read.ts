@@ -30,9 +30,10 @@ async function readPdf(file: File, password?: string, ocr?: (s: string) => void)
     if (!ocr) throw new ReadError('scan', String(doc.numPages));
     if (doc.numPages > OCR_MAX) throw new ReadError('pages', `${doc.numPages} scanned`);
     const { ocrPages } = await import('./ocr');
-    let pages: string[][]; try { pages = await ocrPages(doc, ocr); } catch (e: any) { throw new ReadError('ocr', String(e?.message || e).split('\n')[0].slice(0, 160)); }
-    if (pages.every(p => !p.length)) throw new ReadError('damaged');
-    return pages.map((paras, i) => ({ n: i + 1, file: file.name, h: heading(paras, i + 1), paras: paras.filter(x => x !== heading(paras, i + 1)) }));
+    let pages: Awaited<ReturnType<typeof ocrPages>>; try { pages = await ocrPages(doc, ocr); } catch (e: any) { throw new ReadError('ocr', String(e?.message || e).split('\n')[0].slice(0, 160)); }
+    if (pages.every(p => !p.paras.length)) throw new ReadError('damaged');
+    console.info('[ContraClear] OCR ms per page:', pages.map(p => p.ms).join(', '));
+    return pages.map((p, i) => { const h = heading(p.paras, i + 1); return { n: i + 1, file: file.name, h, paras: p.paras.filter(x => x !== h), quality: p.quality }; });
   }
   return out;
 }

@@ -46,8 +46,11 @@ test('classifier on held-out clauses, and the full on-device check', async () =>
   expect(lease.k).toBe('y'); expect(lease.conf![1].v).toBe('$620'); expect(lease.conf![1].ref).toContain('p. 18');
   expect(out.contract.items.find(i => /stop it renewing/.test(i.sentence))!.k).toBe('g'); expect(out.agreed).toBeGreaterThan(10);
 });
-import { docTagsToParas } from './ocr';
-test('DocTags from the scan reader become paragraphs', () => {
-  const t = '<doctag><page_header><loc_1><loc_2>Page 2</page_header><section_header_level_1><loc_10><loc_20>3. FEES AND PAYMENT</section_header_level_1><text><loc_30><loc_40>3.2 Late amounts accrue interest at 1% per month.</text><otsl><ched>Fee<ched>Amount<nl><fcel>Hosting<fcel>$380<nl></otsl></doctag><end_of_utterance>';
-  expect(docTagsToParas(t)).toEqual(['3. FEES AND PAYMENT', '3.2 Late amounts accrue interest at 1% per month.', 'Fee Amount Hosting $380']);
+import { assemble } from './ocr';
+test('OCR lines and layout blocks become paragraphs in reading order', () => {
+  const L = (text: string, x1: number, y1: number, x2 = x1 + 300, y2 = y1 + 20) => ({ text, score: 0.98, x1, y1, x2, y2 });
+  const lines = [L('Page 2 of 10', 700, 10, 800), L('3. FEES AND PAYMENT', 100, 100), L('3.1 Customer shall pay the fees within', 100, 140), L('thirty (30) days.', 100, 165), L('3.2 Late amounts accrue interest at 1% per', 100, 200), L('month.', 100, 225), L('Hosting', 100, 300, 200), L('$380', 400, 302, 480)];
+  const R = (label: string, x1: number, y1: number, x2: number, y2: number) => ({ label, score: 0.9, x1, y1, x2, y2 });
+  expect(assemble(lines, [R('header', 690, 0, 810, 40), R('paragraph_title', 90, 95, 420, 125), R('text', 90, 135, 420, 250), R('table', 90, 290, 500, 330)]))
+    .toEqual(['3. FEES AND PAYMENT', '3.1 Customer shall pay the fees within thirty (30) days.', '3.2 Late amounts accrue interest at 1% per month.', 'Hosting | $380']);
 });

@@ -25,6 +25,8 @@ export interface Contract {
   slim?: boolean;
   /** The text was read from a scan by OCR, so wording should be checked carefully. */
   ocr?: boolean;
+  /** OCR confidence per page (0–1), for scanned files. */
+  ocrQuality?: number[];
   conf: Record<number, { v: string; how: 'confirmed' | 'edited' }>; dis: Record<number, boolean>;
   hist: Record<number, string[]>; pick: Record<number, number>; accepted: boolean; tracked: Tracked[];
 }

@@ -21,7 +21,7 @@ export async function processInput(inp: Input, s: Settings, on: (p: Progress) =>
   await step({ stage: 2, pages: raw.length, ...count });
   // The AI check runs only with the on-device engine. In Rules only these two stages report themselves as off.
   const aiOff = s.eng !== 'device';
-  let c: Contract = { id: uid(), name: '', cp: r.cp, type: r.type, year: r.year, src: inp.src, files: [inp.name], pages: r.pages, items: r.items, nf: r.nf, added: iso(today()), lines, ocr: inp.ocr || undefined, ...blankState() };
+  let c: Contract = { id: uid(), name: '', cp: r.cp, type: r.type, year: r.year, src: inp.src, files: [inp.name], pages: r.pages, items: r.items, nf: r.nf, added: iso(today()), lines, ocr: inp.ocr || undefined, ocrQuality: inp.ocr ? raw.map(p => p.quality ?? 0) : undefined, ...blankState() };
   await step({ stage: 3, pages: raw.length, ...count, aiOff });
   let agreed: number | undefined;
   if (!aiOff) { const out = secondCheck(c); c = out.contract; agreed = out.agreed; }
