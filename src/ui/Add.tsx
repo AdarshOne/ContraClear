@@ -1,7 +1,8 @@
 // Flow 2 (Drop state and its sources) and Flow 3 (processing, queue, results).
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { FolderOpen, HardDrive, ClipboardPaste, Check, Minus } from 'lucide-react';
 import { STAGES, type Input, type Progress } from '../lib/pipeline';
+import { OCR_MB, canOcr } from '../lib/ocr';
 import { looksReadable, MAX_MB, MAX_PAGES, type ReadCode } from '../lib/read';
 import { Badge, Steps } from './kit';
 export interface Job { id: string; input: Input; state: 'waiting' | 'reading' | 'done' | 'failed' | 'cancelled'; progress?: Progress; code?: ReadCode | 'other'; detail?: string; contractId?: string; items?: number; need?: number }
@@ -45,12 +46,14 @@ const ERR: Record<string, (j: Job) => [string, string]> = {
   type: j => [`ContraClear can’t read ${j.detail} files.`, 'Add the contract itself, as a PDF or Word (.docx) file.'],
   big: j => [`This file is ${j.detail} MB. The limit is ${MAX_MB} MB.`, 'Save it as a smaller PDF, or keep only the pages with prices and terms.'],
   pages: j => [`This file has ${j.detail} pages. The limit is ${MAX_PAGES}.`, 'Add just the contract part, or split it into smaller files.'],
+  ocr: j => ['The scan reader stopped.', `It couldn’t run on this computer: ${j.detail}. Nothing was kept. Add a copy where you can select the text, or paste the text.`],
   scan: () => ['This is a scan, with no text layer.', 'Reading scans isn’t in this version yet, and we won’t guess. Add a copy where you can select the text, or paste the text.'],
   damaged: j => [`Couldn’t read ${j.input.name}.`, 'The file is damaged or empty and won’t open. Nothing was kept.'],
   other: j => [`Couldn’t read ${j.input.name}.`, 'Something went wrong while reading it. Nothing was kept.'],
 };
 export function Processing({ jobs, paused, onSkip, onCancel, onOpen, onRetry, onChoose, onPause }: { jobs: Job[]; paused: boolean; onSkip: () => void; onCancel: () => void; onOpen: (id?: string) => void; onRetry: (j: Job, patch: Partial<Input>) => void; onChoose: () => void; onPause: () => void }) {
-  const [pw, setPw] = useState('');
+  const [pw, setPw] = useState(''); const [gpu, setGpu] = useState<boolean | null>(null);
+  useEffect(() => { canOcr().then(setGpu); }, []);
   const wrap = (kids: ReactNode) => <div className="stage"><main className="full"><span className="wm" style={{ fontSize: 20 }}>ContraClear</span>{kids}</main><Badge /></div>;
   if (jobs.length > 1) {
     const active = jobs.some(j => j.state === 'waiting' || j.state === 'reading'), done = jobs.filter(j => j.state === 'done');
@@ -64,11 +67,12 @@ export function Processing({ jobs, paused, onSkip, onCancel, onOpen, onRetry, on
   if (j.state === 'cancelled') return wrap(<><h1 className="big" role="status">Stopped. Nothing was saved.</h1><p className="pp">Your file was closed and not kept.</p><div className="acts"><button className="b pri" autoFocus onClick={onChoose}>Choose files</button></div></>);
   if (j.state === 'failed' && j.code === 'pw') return wrap(<><h1 className="big">This PDF has a password.</h1><p className="pp">Type it to open the file. It is used once, in memory, and never saved.</p><form style={{ display: 'contents' }} onSubmit={e => { e.preventDefault(); onRetry(j, { password: pw }); setPw(''); }}><div className="fld"><label htmlFor="ppw">PDF password</label><input id="ppw" type="password" autoFocus value={pw} onChange={e => setPw(e.target.value)} />{j.input.password !== undefined && <span className="err" role="alert">That password didn’t open it.</span>}</div><div className="acts"><button className="b pri">Unlock and read</button><button type="button" className="b" onClick={onChoose}>Choose a different file</button></div></form></>);
   if (j.state === 'failed' && j.code === 'fr') return wrap(<><h1 className="big">This contract is in French. English only for now.</h1><p className="pp">You can still preview it. We won’t guess at its terms.</p><div className="acts"><button className="b pri" autoFocus onClick={() => onRetry(j, { preview: true } as any)}>Preview it</button><button className="b" onClick={onChoose}>Choose another file</button></div></>);
+  if (j.state === 'failed' && j.code === 'scan') return wrap(<><h1 className="big">This is a scan.</h1>{gpu === false ? <p className="pp" style={{ maxWidth: 580 }}>This computer can’t run the scan reader: it needs a browser with WebGPU, such as a recent Chrome or Edge. Add a copy where you can select the text, or paste the text.</p> : <p className="pp" style={{ maxWidth: 580 }}>ContraClear can read it on this device with IBM’s Granite-Docling model. The first time, your browser downloads the model, about {OCR_MB} MB, from Hugging Face, and its engine from jsDelivr. Your contract is never sent. After that it works offline. Expect around a minute a page, and check the wording carefully.</p>}<div className="acts">{gpu !== false && <button className="b pri" autoFocus disabled={gpu === null} onClick={() => onRetry(j, { ocr: true })}>Read it on this device</button>}<button className={gpu === false ? 'b pri' : 'b'} onClick={onChoose}>Choose another file</button></div></>);
   if (j.state === 'failed') { const [t, d] = (ERR[j.code || 'other'] || ERR.other)(j); return wrap(<><h1 className="big" role="alert">{t}</h1><p className="pp" style={{ maxWidth: 560 }}>{d}</p><div className="acts"><button className="b pri" autoFocus onClick={onChoose}>Choose another file</button></div></>); }
   const p = j.progress || { stage: 0 }, cur = p.stage;
   return wrap(<div className="pv">
     <div style={{ display: 'grid', gap: 20 }}>
-      <h1 className="ph" aria-live="polite">{STAGES[cur]}…</h1>
+      <h1 className="ph" aria-live="polite">{STAGES[cur]}…</h1>{p.note && <p className="pp" role="status" style={{ margin: 0 }}>{p.note}</p>}
       <ol className="stg">{STAGES.map((n, i) => { const st = i < cur ? 2 : i === cur ? 1 : 0, off = p.aiOff && (i === 3 || i === 4) && st > 0; return <li key={i} style={{ color: st === 0 ? '#6B6B6B' : '#111', fontWeight: st === 1 ? 600 : 400 }}><span className="d num" style={{ borderColor: st === 0 ? '#BDBDBD' : '#111', background: st === 2 && !off ? '#111' : '#fff', color: st === 2 && !off ? '#fff' : 'inherit' }}>{off ? <Minus size={14} aria-hidden /> : st === 2 ? <Check size={14} aria-hidden /> : i + 1}</span><span>{n}{off && <span className="faint" style={{ fontWeight: 400 }}> · off in Rules only</span>}<span className="vh">{st === 2 ? (off ? 'skipped' : 'done') : st === 1 ? 'in progress' : 'waiting'}</span></span></li>; })}</ol>
       <div className="acts"><button className="b" onClick={onSkip}>Skip to results</button><button className="b q" onClick={onCancel}>Cancel</button></div>
       <span className="faint num" style={{ fontSize: 14 }}>{j.input.name}{p.pages ? ` · ${p.pages} ${j.input.text !== undefined ? 'lines' : p.pages === 1 ? 'page' : 'pages'}` : ''}</span>

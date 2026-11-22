@@ -310,3 +310,46 @@ html,body{height:100%}
 .has-home .full{padding-top:80px}
 @media (max-width:900px){.cc-home{width:40px;padding:0}.cc-home span{display:none}.has-home .ws .top{padding-left:68px}}
 .devpill{position:fixed;left:16px;bottom:16px;z-index:95;display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:0 4px 0 12px;border:1px dashed #111;border-radius:999px;background:#fff;font-size:14px}.devpill .lk{min-height:32px}
+
+/* ---- Workspace look, revised to the reference mock (Nov 2026). Tokens only, no new colours. ---- */
+.top{justify-content:space-between}
+.top .ttl{position:absolute;left:50%;transform:translateX(-50%);max-width:40vw;color:#111;font-weight:500}
+.top .b,.pop{border-radius:999px}.pop{border-radius:14px}
+.tls{display:none}
+.list{display:flex;flex-direction:column;padding:24px 16px}
+.list .lh{padding:0 12px}
+.fl{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;align-items:center;width:100%;min-height:64px;padding:10px 12px;border:0;border-radius:14px;background:none;cursor:pointer;text-align:left;font-size:16px;color:#111}
+.fl:hover{background:#F4F4F4}.fl.on{background:#F4F4F4}
+.fi{position:relative;display:inline-flex;align-items:center;justify-content:center;color:#444}
+.fi i{position:absolute;bottom:5px;font:700 9px/1 "Inter Variable",Inter,sans-serif;font-style:normal;letter-spacing:.02em;color:#111}
+.fn2{overflow-wrap:anywhere;line-height:1.3}.fn2 small{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:14px;color:#6B6B6B}
+.fn2 small s{width:7px;height:7px;border-radius:50%;flex:none}
+.fnote{margin-top:auto;padding:16px 12px 0;display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#444;line-height:1.5}
+.fnote .ref{font-size:14px;font-weight:500;min-height:0}
+.docw{background:#F4F4F4}
+.doc .tbar{justify-content:center;background:transparent;border-bottom:0;padding-top:12px}
+.tbar [aria-label="Thumbnails"],.tbar [aria-label="Find in document"],.tbar [aria-label="Print"],.tbar [aria-label="Download the contract text"],.tbar .fn,.tbar .sp,.rail,.thumbs{display:none!important}
+.tbar [aria-label="Zoom out"]{margin-left:20px}
+.col{padding:8px 56px 160px}
+.pg{background:#fff;border:1px solid #E3E3E3;border-radius:14px;padding:48px 56px;margin:16px 0}
+.pg:first-child{border-top:1px solid #E3E3E3}
+.pgn{font-size:13px;margin-bottom:16px}
+.pg h2{font:600 15px/1.4 "Source Serif 4 Variable","Source Serif 4",Georgia,serif;text-transform:uppercase;letter-spacing:.02em;color:#111}
+.cp{font-size:17px}
+.needs{padding:32px 28px}
+.needs .sech{align-items:center}
+.pager{display:inline-flex;align-items:center;gap:2px;color:#6B6B6B}.pager .ib{width:40px;height:40px}.pager .ib:disabled{opacity:.35;cursor:default}
+.needs .it{border:0;padding:0;gap:20px;cursor:default}.needs .it.on{box-shadow:none}
+.needs .it h3{font-size:28px;line-height:1.2;letter-spacing:-0.02em}
+.needs .it .chip{font-size:14px;font-weight:500;padding:4px 12px}
+.why{margin:0;font-size:15px;line-height:1.55;color:#6B6B6B}
+.needs .acts .b{border-radius:999px;min-height:48px;padding:0 28px}
+.needs .acts .b:not(.pri){border-color:#E3E3E3}
+.needs .acts .b.q{padding:0 10px;font-weight:500;color:#444}
+.needs .acts kbd{display:none}
+@media (max-width:1180px){.pg{padding:32px}.col{padding:8px 24px 120px}}
+@media (max-width:900px){.top .ttl{position:static;transform:none;max-width:none}.pg{padding:24px 20px}.col{padding:8px 12px 80px}}
+.doc .tbar{background:#F4F4F4}
+.needs{padding:32px 28px 88px}.list{padding-bottom:72px}
+.needs .acts .b.q{border-color:transparent;padding:0 8px;min-height:44px}
+.tbar .ib{background:transparent}

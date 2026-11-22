@@ -1,15 +1,15 @@
 // Reads files in the browser. Nothing here touches the network.
 import type { RawPage } from './rules';
-export type ReadCode = 'doc' | 'type' | 'big' | 'pages' | 'pw' | 'fr' | 'scan' | 'damaged';
+export type ReadCode = 'ocr' | 'doc' | 'type' | 'big' | 'pages' | 'pw' | 'fr' | 'scan' | 'damaged';
 export class ReadError extends Error { constructor(public code: ReadCode, public detail = '', public raw?: RawPage[]) { super(code); } }
-export const MAX_MB = 50, MAX_PAGES = 300;
+export const MAX_MB = 50, MAX_PAGES = 300, OCR_MAX = 40;
 const ext = (n: string) => (n.match(/\.([a-z0-9]+)$/i) || ['', ''])[1].toLowerCase();
 export const looksReadable = (name: string) => ['pdf', 'docx', 'txt'].includes(ext(name));
 
 const isFrench = (t: string) => { const s = ' ' + t.slice(0, 6000).toLowerCase() + ' '; const c = (w: string[]) => w.reduce((n, x) => n + s.split(x).length - 1, 0); return c([' le ', ' la ', ' les ', ' des ', ' et ', ' du ', ' une ', ' est ']) > 1.5 * c([' the ', ' and ', ' of ', ' to ', ' shall ', ' is ']) + 5; };
 const heading = (paras: string[], n: number) => { const h = paras.find(p => p.length < 70 && !/[.;]$/.test(p)); return h || (paras[0] ? paras[0].replace(/^(\d+(?:\.\d+)*\.?\s+[^.]{0,40}).*$/s, '$1') : `Page ${n}`); };
 
-async function readPdf(file: File, password?: string): Promise<RawPage[]> {
+async function readPdf(file: File, password?: string, ocr?: (s: string) => void): Promise<RawPage[]> {
   const pdfjs = await import('pdfjs-dist');
   pdfjs.GlobalWorkerOptions.workerSrc = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
   let doc;
@@ -26,7 +26,14 @@ async function readPdf(file: File, password?: string): Promise<RawPage[]> {
     if (cur) paras.push(cur); chars += paras.join('').length;
     const h = heading(paras, n); out.push({ n, file: file.name, h, paras: paras.filter(x => x !== h) });
   }
-  if (chars < 40 * doc.numPages) throw new ReadError('scan', String(doc.numPages));
+  if (chars < 40 * doc.numPages) {
+    if (!ocr) throw new ReadError('scan', String(doc.numPages));
+    if (doc.numPages > OCR_MAX) throw new ReadError('pages', `${doc.numPages} scanned`);
+    const { ocrPages } = await import('./ocr');
+    let pages: string[][]; try { pages = await ocrPages(doc, ocr); } catch (e: any) { throw new ReadError('ocr', String(e?.message || e).split('\n')[0].slice(0, 160)); }
+    if (pages.every(p => !p.length)) throw new ReadError('damaged');
+    return pages.map((paras, i) => ({ n: i + 1, file: file.name, h: heading(paras, i + 1), paras: paras.filter(x => x !== heading(paras, i + 1)) }));
+  }
   return out;
 }
 export function pagesFromText(text: string, file: string, per = 2600): RawPage[] {
@@ -39,13 +46,13 @@ export function pagesFromText(text: string, file: string, per = 2600): RawPage[]
 /** Pasted text has no pages, so each paragraph is a numbered line. */
 export const linesFromText = (text: string): RawPage[] => text.replace(/\r/g, '').split(/\n+/).map(s => s.trim()).filter(Boolean).map((p, i) => ({ n: i + 1, file: 'Pasted text', h: '', paras: [p] }));
 
-export async function readFile(file: File, password?: string): Promise<RawPage[]> {
+export async function readFile(file: File, password?: string, ocr?: (s: string) => void): Promise<RawPage[]> {
   const e = ext(file.name);
   if (e === 'doc') throw new ReadError('doc');
   if (!looksReadable(file.name)) throw new ReadError('type', e ? '.' + e : 'this kind of');
   if (file.size > MAX_MB * 1048576) throw new ReadError('big', String(Math.round(file.size / 1048576)));
   let raw: RawPage[];
-  if (e === 'pdf') raw = await readPdf(file, password);
+  if (e === 'pdf') raw = await readPdf(file, password, ocr);
   else if (e === 'docx') { try { const mammoth = await import('mammoth'); raw = pagesFromText((await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value, file.name); } catch { throw new ReadError('damaged'); } }
   else raw = pagesFromText(await file.text(), file.name);
   if (!raw.length) throw new ReadError('damaged');

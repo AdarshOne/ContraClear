@@ -111,7 +111,7 @@ export function secondCheck(c: Contract): { contract: Contract; agreed: number; 
     const kindOk = top.cls === f.cls || (kinds[1].cls === f.cls && kinds[1].p > 0.25);
     if (!kindOk) { differ++; return { ...it, k: 'y' as const, ai: `${r.v}, but it reads like ${CLS_LABEL[top.cls]} clause` }; }
     // Same figures read twice is not two checks. Without separate evidence the item stays with the user.
-    if (!r.strong) { differ++; return { ...it, aiNote: f.iso !== undefined ? 'same date, but dates are written only once, so nothing to compare' : 'same figure, but it isn’t written out in words, so nothing to compare' }; }
+    if (!r.strong) { differ++; return { ...it, aiNote: `Read two ways. Both found ${r.v}, but ${f.iso !== undefined ? 'dates are written only once' : 'the clause doesn’t spell it out in words'}, so one check had nothing to compare against.` }; }
     agreed++; return { ...it, k: 'g' as const, ai: it.rules, aiNote: undefined };
   });
   return { contract: { ...c, items }, agreed, differ };

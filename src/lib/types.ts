@@ -23,6 +23,8 @@ export interface Contract {
   pages: Page[]; items: Item[]; nf: NotFound[]; added: string; sample?: boolean; lines?: boolean;
   /** True once saved: only the clauses that items or tracked text come from are kept, not the whole text. */
   slim?: boolean;
+  /** The text was read from a scan by OCR, so wording should be checked carefully. */
+  ocr?: boolean;
   conf: Record<number, { v: string; how: 'confirmed' | 'edited' }>; dis: Record<number, boolean>;
   hist: Record<number, string[]>; pick: Record<number, number>; accepted: boolean; tracked: Tracked[];
 }

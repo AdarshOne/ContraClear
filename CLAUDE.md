@@ -66,6 +66,10 @@ Run: `npm install`, `npm run dev` (open http://localhost:5173/contraclear/), `np
 
 **Storage:** never the file, and never the whole contract text. On save (`src/lib/slim.ts`) each contract keeps only its items (sentence, value, exact quote, file, page, section) and the clause paragraphs those items and tracked text come from. Pages stay as empty placeholders so numbering and the trace line up. Full text exists only in memory for the session the file was added.
 
+**Workspace look (Nov 2026, from Adarsh's reference mock, overrides the boards):** centred title, a search icon and Export pill in the top bar (the engine switch lives in ⌘K); a plain "Files" list on the left with "Files stay on this device"; the document as white page cards on the wash; "To confirm" on the right showing one item at a time with a "1 of 6" pager, pill buttons and a plain "Read two ways…" explanation. The 90-day strip is hidden for everyone. Styles are at the end of `src/styles/app.css`; tokens only, so file icons are monochrome.
+
+**Scanned PDFs (OCR):** IBM's Granite-Docling 258M (`onnx-community/granite-docling-258M-ONNX`) via Transformers.js on WebGPU, in a worker (`src/lib/ocr.worker.ts`, `src/lib/ocr.ts`). Offered on the "This is a scan" screen; the user approves a one-time ~396 MB model download from Hugging Face (fp16 vision and embeddings, q4f16 decoder), cached by the browser. The ONNX Runtime engine (~27 MB, over Cloudflare's 25 MiB file limit) loads from jsDelivr at the pinned version; `scripts/pages.mjs` drops the bundled copy. Pages are rendered by PDF.js, read as DocTags, and turned into paragraphs. Needs WebGPU; up to 40 scanned pages. These downloads happen in the worker, which the page's CSP does not cover. No per-page quality meter yet.
+
 **Built and working**
 - Flow 1 sign-in screen (email is stored on this device only; there is no server yet).
 - Sign-in: passkey (primary), Google (shows "not set up yet" until there is an OAuth client), or email. There is no passphrase.
@@ -84,7 +88,7 @@ Run: `npm install`, `npm run dev` (open http://localhost:5173/contraclear/), `np
 - Email sign-in link and the server-side email record (needs a small backend).
 - Cloud AI with your own key: removed on purpose (no Claude or other provider APIs). The menu option says it isn't in this version. An earlier implementation is in git history (commit 6ce923f).
 - A downloadable on-device language model (WebLLM). The current on-device engine is classical ML instead.
-- OCR for scans, keeping encrypted copies of original files (the setting is stored but nothing is kept).
+- Keeping encrypted copies of original files (the setting is stored but nothing is kept).
 - Flow 8 amendments and versions, Flow 14 report a wrong extraction, folder re-scan, meaning-based search.
 
 **Deviations from the suggested architecture**
