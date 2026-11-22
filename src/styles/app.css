@@ -309,3 +309,4 @@ html,body{height:100%}
 .has-home .ws .top{padding-left:180px}
 .has-home .full{padding-top:80px}
 @media (max-width:900px){.cc-home{width:40px;padding:0}.cc-home span{display:none}.has-home .ws .top{padding-left:68px}}
+.devpill{position:fixed;left:16px;bottom:16px;z-index:95;display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:0 4px 0 12px;border:1px dashed #111;border-radius:999px;background:#fff;font-size:14px}.devpill .lk{min-height:32px}

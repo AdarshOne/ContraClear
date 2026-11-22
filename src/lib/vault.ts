@@ -3,7 +3,7 @@
 // and, separately, by a one-time recovery key (PBKDF2). There is no passphrase.
 // If a device can't make a PRF passkey, the user may continue with a device key: still encrypted at rest,
 // but it opens on this browser profile without a secret. The UI says so plainly.
-const DBN = 'contraclear', ST = 'vault', ITER = 600_000, DK = 'devicekey';
+let DBN = 'contraclear'; const ST = 'vault', ITER = 600_000, DK = 'devicekey';
 const enc = new TextEncoder(), dec = new TextDecoder();
 const b64 = (b: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uint8Array(b as ArrayBuffer)));
 const unb64 = (s: string) => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -65,6 +65,8 @@ export const vault = {
   /** How this vault opens. `legacy` is a vault from the passphrase version: it opens once with the recovery key. */
   async info(): Promise<{ kind: Kind; cred: boolean; legacy: boolean }> { const m = await get<any>('meta'); if (!m?.rec) throw new Error('corrupt'); return { kind: m.kind || 'passkey', cred: !!m.cred, legacy: m.v !== 2 }; },
   isOpen: () => !!dek,
+  /** Testing mode keeps its own vault, separate from the real one. */
+  useDb(name: string) { DBN = name; dek = null; },
   /** New vault. Throws 'cancelled' or 'unsupported' if no passkey was made; `device` skips the passkey. */
   create: (name: string, device = false) => setup(rnd(32), name || 'ContraClear vault', device),
   /** Throws 'cancelled', 'wrong' (a different passkey), 'legacy' or 'corrupt'. */

@@ -8,16 +8,16 @@ import { download, toCsv, calEvents } from '../lib/exporters';
 import { fmtShort, today } from '../lib/dates';
 import { next30, status, strip } from '../lib/timeline';
 import { Badge, Chip, KIcon, Nla } from './kit';
-import { clearSecond, secondCheck } from '../lib/second';
+import { clearSecond, secondCheck, classify } from '../lib/second';
 import { CalendarPanel, EnginePanel, FilesPanel, PortfolioPanel, SettingsPanel, SharePanel } from './Panels';
 
-interface Props { db: Db; setDb: (f: (d: Db) => Db) => void; active: string; setActive: (id: string) => void; startHome: boolean; onAdd: () => void; onLock: () => void; onSample: () => void; onDelete: () => void; onSignOut: () => void }
+interface Props { db: Db; setDb: (f: (d: Db) => Db) => void; active: string; setActive: (id: string) => void; startHome: boolean; focus?: boolean; onAdd: () => void; onLock: () => void; onSample: () => void; onDelete: () => void; onSignOut: () => void }
 type Track = { step: 'menu' | 'form'; txt: string; x: number; y: number; page: number; kind?: string; title?: string; who?: string; rem?: string };
 const narrow = () => matchMedia('(max-width:900px)').matches;
 const stamp = () => fmtShort(today());
 const paraText = (pa: { lead: string; segs: { x: string }[] }) => (pa.lead + ' ' + pa.segs.map(x => x.x).join('')).trim();
 
-export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLock, onSample, onDelete, onSignOut }: Props) {
+export function Workspace({ focus = false, db, setDb, active, setActive, startHome, onAdd, onLock, onSample, onDelete, onSignOut }: Props) {
   const cs = db.contracts, c = cs.find(x => x.id === active) || cs[0];
   const [s, setS] = useState({ sel: 0, hov: 0, hq: '', edit: null as null | { id: number; kind: 'edit' | 'wrong' }, editVal: '', cmd: false, q: '', ci: 0, fl: { c: false, d: false }, pop: '' as '' | 'eng' | 'exp', left: true, page: 1, view: (startHome ? 'home' : 'doc') as 'doc' | 'list' | 'home', node: 'all', panel: '' as '' | 'portfolio' | 'settings' | 'cal' | 'files' | 'share' | 'cloud', formula: 0, track: null as Track | null, hint: false, find: false, fq: '', thumbs: false, zoom: 100, sheet: false, showAgreed: false, showNF: false, drag: '', merged: {} as Record<string, boolean> });
   const set = (p: Partial<typeof s>) => setS(o => ({ ...o, ...p }));
@@ -47,7 +47,7 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
   const dismiss = (id: number) => { upd(x => ({ ...x, dis: { ...x.dis, [id]: true }, hist: log(x, id, 'You dismissed it') })); set({ sel: order.find(x => x !== id && need(x)) ?? order.find(x => x !== id && !c.dis[x]) ?? 0 }); say('Dismissed. It stays out of your calendar.', () => { upd(x => { const d = { ...x.dis }; delete d[id]; return { ...x, dis: d }; }); setToast(null); }); };
   const acceptAll = () => { const n = order.filter(id => eff(IT(id)!) === 'g' && !c.dis[id]).length; if (n) upd(x => ({ ...x, accepted: true })); say(n ? `Confirmed the ${n} items both checks agree on.` : 'No items have two agreeing checks yet. Confirm each one yourself, or turn on On-device AI.'); };
   const allLeft = cs.reduce((n, x) => n + x.items.filter(i => isNeed(x, i.id)).length, 0);
-  const openCal = () => { if (needIds.length) return say(`Check ${needIds.length} more first. Dates go to your calendar after review.`); if (!calEvents([c]).length) return say('This contract has no dated items to add.'); set({ panel: 'cal', pop: '' }); };
+  const openCal = () => { if (focus) return say('Calendar is hidden in testing mode.'); if (needIds.length) return say(`Check ${needIds.length} more first. Dates go to your calendar after review.`); if (!calEvents([c]).length) return say('This contract has no dated items to add.'); set({ panel: 'cal', pop: '' }); };
   const goPage = (n: number) => { n = Math.max(1, Math.min(c.pages.length, n)); const el = document.getElementById('pg' + n), pane = document.getElementById('doc'); if (el && pane) pane.scrollTop += el.getBoundingClientRect().top - pane.getBoundingClientRect().top - 8; set({ page: n, view: 'doc' }); };
   const onScroll = () => { const pane = document.getElementById('doc'); if (!pane) return; const top = pane.getBoundingClientRect().top + 90; let p = 1; for (const pg of c.pages) { const el = document.getElementById('pg' + pg.n); if (el && el.getBoundingClientRect().top <= top) p = pg.n; } if (p !== s.page) set({ page: p }); if (s.track?.step === 'menu') set({ track: null }); };
   const onUp = () => { try { const g = getSelection(); const txt = (g?.toString() || '').trim(); if (txt.length < 4 || txt.length > 400 || !g) return; const r = g.getRangeAt(0).getBoundingClientRect(), w = document.getElementById('docw')!.getBoundingClientRect(); let n: any = g.anchorNode; while (n && !(n.id && /^pg\d+$/.test(n.id))) n = n.parentNode; set({ track: { step: 'menu', txt, x: Math.max(16, Math.min(w.width - 320, r.left - w.left)), y: r.bottom - w.top + 8, page: n ? +n.id.slice(2) : s.page }, hint: false }); } catch { /* no selection */ } };
@@ -76,6 +76,7 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
     const q = s.q.trim().toLowerCase();
     const A: [string, string, () => void][] = [['Add files', '', onAdd], ['Confirm the selected item', '↵', () => confirm(sel)], ['Edit the selected item', 'E', () => startEdit(sel)], ['Confirm all items both checks agree on', '⇧↵', acceptAll], ['Add dates to my calendar', 'C', openCal], ['Export: CSV', '', exportCsv], ['Export: calendar file (.ics)', '', openCal], ['Export: encrypted vault file, or import one', '', () => set({ panel: 'share' })], ['Engine: Rules only (free)', '', () => pickEngine('rules')], ['Engine: On-device AI (free)', '', () => pickEngine('device')], ['Engine: Cloud AI with your own key (pennies)', '', () => pickEngine('cloud')], ['Next 30 days', '', () => set({ view: 'home' })], ['Portfolio at a glance', '', () => set({ panel: 'portfolio' })], ['Settings', '', () => set({ panel: 'settings' })], ['What happens to my files?', '', () => set({ panel: 'files' })], ['Lock vault', '', onLock]];
     if (!cs.some(x => x.sample)) A.push(['Open the sample contract', '', onSample]);
+    if (focus) for (const t of ['Add dates to my calendar', 'Export: calendar file (.ics)', 'Next 30 days', 'Portfolio at a glance', 'Settings', 'Lock vault']) { const i = A.findIndex(a => a[0] === t); if (i >= 0) A.splice(i, 1); }
     const L = (q ? A.filter(a => a[0].toLowerCase().includes(q)) : A).map(a => ({ t: a[0], k: a[1], run: a[2] }));
     const m = q.match(/^(?:p|page)?\s*\.?\s*(\d{1,3})$/); if (m && +m[1] >= 1 && +m[1] <= c.pages.length) L.unshift({ t: 'Go to page ' + m[1], k: '', run: () => goPage(+m[1]) });
     return L;
@@ -111,6 +112,7 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
     return <article key={id} className={on ? 'it on' : 'it'} aria-current={on} aria-labelledby={'h' + id} onClick={() => (on && !narrow()) || select(id)} onMouseEnter={() => hover(id)}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><Chip k={k} user={user ? (cf.how === 'edited' ? 'Edited by you' : 'Confirmed by you') : undefined} /><button className="ref num" onClick={() => select(id)}>{it.ref}</button></div>
       <h3 id={'h' + id}>{it.sentence}</h3>
+      {focus && (() => { const k = classify(it.quote); const f = it.fact ? Object.entries(it.fact).filter(([x]) => x !== 'cls').map(([x, v]) => `${x} ${Array.isArray(v) ? v.join('+') : v}`).join(', ') : ''; return <dl className="meta" style={{ fontSize: 14, background: '#F4F4F4', borderRadius: 8, padding: '8px 10px' }}><dt>Source</dt><dd className="num">{c.pages.find(p => p.n === it.page)?.file} · {it.ref}</dd><dt>Rules read</dt><dd className="num">{it.fact ? `${it.fact.cls}: ${f}` : 'from the sample data'}</dd><dt>Classifier</dt><dd className="num">{k[0].cls} {Math.round(k[0].p * 100)}% · {k[1].cls} {Math.round(k[1].p * 100)}%</dd><dt>2nd check</dt><dd>{it.aiNote ?? it.ai ?? 'not run (Rules only)'}</dd></dl>; })()}
       <dl className="meta"><dt>Who</dt><dd>{it.who}</dd><dt>{it.kind === 'money' ? 'Amount' : 'What'}</dt><dd className="num">{user ? cf.v : it.value}</dd><dt>Due</dt><dd className="num">{it.due}</dd></dl>
       {!isConf && <blockquote className="qt">“{it.quote}”</blockquote>}
       {!isConf && !user && <div className="two num">Rules check: <b>{it.rules}</b> · AI check: <b>{both ? it.ai : it.aiNote ?? 'off'}</b></div>}
@@ -153,16 +155,18 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
           <button className="opt" role="menuitem" onClick={() => set({ pop: '', panel: 'share' })}><KeyRound size={20} aria-hidden /><div><b>Encrypted vault file</b><span>To share with a teammate, or to import one. Send the share code separately.</span></div></button>
           <button className="opt" role="menuitem" onClick={() => { set({ pop: '' }); say('Google Sheets and the handover pack need Google, which isn’t connected on this copy yet. CSV has the same rows.'); }}><FileSpreadsheet size={20} aria-hidden /><div><b>Google Sheets and handover pack</b><span>Not connected on this copy yet. Use CSV for now.</span></div></button>
         </div>}
-        <button className="ib" onClick={onLock} aria-label="Lock vault" title="Lock vault"><Lock size={20} aria-hidden /></button>
-        <button className="ib" onClick={() => set({ panel: 'settings', pop: '' })} aria-label="Settings" title="Settings"><Cog size={20} aria-hidden /></button>
+        {!focus && <button className="ib" onClick={onLock} aria-label="Lock vault" title="Lock vault"><Lock size={20} aria-hidden /></button>}
+        {!focus && <button className="ib" onClick={() => set({ panel: 'settings', pop: '' })} aria-label="Settings" title="Settings"><Cog size={20} aria-hidden /></button>}
       </div>
     </header>
+    {!focus && <>
     <section className="tls" aria-label="Next 90 days">
       <div className="tsum"><span className="faint">Next 90 days{s.view === 'doc' ? '' : ' · all contracts'}</span><br /><b className="num">{st.total} due</b><br /><span className="num">{st.payDays} {st.payDays === 1 ? 'payment day' : 'payment days'}{st.cancel ? ` · cancel by ${st.cancel}` : ''}</span></div>
       <div className="track"><div className="ln" /><span className="today">Today</span>
         {st.marks.map(m => <button key={m.key} className={`mk ${m.up ? 'up' : 'dn'}${act === m.id && c.id === m.cid ? ' on' : ''}`} style={{ left: m.l }} onClick={() => select(m.id, m.cid)} onMouseEnter={() => m.cid === c.id && s.view === 'doc' && hover(m.id)} aria-label={`${m.d}, ${m.a}. ${m.tip}`}><span className="tk" /><span className="num">{m.d}</span><b className="num">{m.a}{m.warn && <TriangleAlert size={14} color={COL.y[0]} aria-hidden />}</b><span className="tip">{m.tip}</span></button>)}
       </div>
     </section>
+    </>}
     <div className="main" style={{ ['--lw' as any]: s.left ? '272px' : '64px' }}>
       {s.view === 'doc' && <aside className="needs" aria-label="What needs you" onMouseLeave={() => { hk.current = ''; set({ hov: 0, hq: '' }); }}>
         {needIds.length > 0 ? <section className="sec" aria-labelledby="nh"><div className="sech"><h2 id="nh">Needs your check</h2><span className="num">{needIds.length}</span></div>{needIds.map(card)}</section>
@@ -178,11 +182,13 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
           {s.showNF && <div style={{ display: 'grid', gap: 12 }}>{c.nf.map(n => <div key={n.t} style={{ padding: '4px 12px', display: 'grid', gap: 6 }}><b style={{ fontWeight: 600 }}>{n.t}</b><span className="mute">{n.d}</span><div className="acts"><button className="b" onClick={() => set({ hint: true, sheet: narrow() })}><Plus size={18} aria-hidden />Track this</button><button className="b q" onClick={() => openCmd(n.s)}>Search “{n.s}”</button></div></div>)}</div>}
         </section>
         {disIds.length > 0 && <section className="sec"><div className="sech"><h2>Dismissed</h2></div>{disIds.map(id => <div key={id} className="row" style={{ gridTemplateColumns: '1fr auto', cursor: 'default' }}><s className="mute">{IT(id)!.sentence}</s><button className="b q" onClick={() => upd(x => { const d = { ...x.dis }; delete d[id]; return { ...x, dis: d }; })}>Restore</button></div>)}</section>}
+        {focus ? <div className="calb"><span className="faint" style={{ fontSize: 14 }}>↑ ↓ move · ↵ confirm · E edit · ⌘K search</span></div> : <>
         <div className="calb">
           {ready && calEvents([c]).length > 0 ? <><button className="b pri" onClick={openCal} style={{ minHeight: 52, fontSize: 17 }}><CalendarPlus size={20} aria-hidden />Add dates to my calendar <kbd>C</kbd></button><Nla /></>
             : ready ? <span className="mute">No dated items to add to a calendar.</span>
             : <><span className="mute num">Check {needIds.length} more to add your dates to a calendar.</span><span className="faint" style={{ fontSize: 14 }}>↑ ↓ move · ↵ confirm · E edit · ⌘K everything</span></>}
         </div>
+        </>}
       </aside>}
       {s.view === 'doc' && <section className={s.sheet ? 'docw sheet' : 'docw'} id="docw" aria-label="Document preview">
         <div className="doc" id="doc" onScroll={onScroll} onMouseUp={onUp} tabIndex={0} aria-label="Original contract text">
@@ -198,6 +204,7 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
             <button className="ib" onClick={() => { download(c.name.replace(/[^\w]+/g, '_') + '.txt', c.pages.map(p => `--- ${pageWord} ${p.n} ---\n` + p.paras.map(paraText).join('\n\n')).join('\n\n'), 'text/plain'); say('Saved the contract’s text. ContraClear doesn’t keep the original file.'); }} aria-label="Download the contract text"><Download size={20} aria-hidden /></button>
           </div>
           {s.thumbs && <div className="thumbs">{c.pages.map(p => <button key={p.n} className={s.page === p.n ? 'thm on num' : 'thm num'} onClick={() => goPage(p.n)} aria-label={`${pageWord} ${p.n}${worst[p.n] ? ', has items' : ''}`} style={worst[p.n] && s.page !== p.n ? { borderColor: COL[worst[p.n]][0] } : undefined}>{p.n}</button>)}</div>}
+          {c.slim && <div className="hintc" style={{ borderStyle: 'solid', borderColor: '#E3E3E3' }}><Library size={20} aria-hidden /><span style={{ flex: 1 }}>Only the clauses ContraClear found are kept, with their file, page and section. The rest of this contract’s text isn’t stored.</span></div>}
           {s.hint && <div className="hintc"><TextSelect size={20} aria-hidden /><span style={{ flex: 1 }}>Select the wording in the contract, then choose Date, Amount or Duty.</span><button className="b q" onClick={() => set({ hint: false })}>Got it</button></div>}
           <div className="col" style={{ zoom: s.zoom / 100 }}>{c.pages.map(p => <section className="pg" id={'pg' + p.n} key={p.n} aria-label={`${pageWord} ${p.n}`}><div className="pgn num">{p.file} · {pageWord.toUpperCase()} {p.n}</div>{p.h && <h2>{p.h}</h2>}
             {p.paras.map((pa, i) => <p className="cp" key={i}>{pa.lead && <><b>{pa.lead}</b>{' '}</>}{pa.segs.flatMap((sg, j) => {
@@ -233,12 +240,14 @@ export function Workspace({ db, setDb, active, setActive, startHome, onAdd, onLo
       </div></section>}
       <nav className="list" aria-label="Library">
         {s.left ? <><div className="lh"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Library size={16} aria-hidden />Library · on this device</span><button className="ib" onClick={() => set({ left: false })} aria-label="Collapse library"><PanelLeftClose size={20} aria-hidden /></button></div>
-          {node('home', 'Next 30 days', n30.length)}{node('portfolio', 'Portfolio at a glance', '')}{node('all', 'All contracts', cs.length)}
+          {!focus && <>{node('home', 'Next 30 days', n30.length)}{node('portfolio', 'Portfolio at a glance', '')}</>}{node('all', 'All contracts', cs.length)}
           <div className="th2">Contracts</div>{lib.map(x => <button key={x.id} className={s.view === 'doc' && x.id === c.id ? 'ct on' : 'ct'} onClick={() => open(x.id)}>{x.name}<small>{status(x).label}</small></button>)}
+          {!focus && <>
           <div className="th2">By counterparty</div>{uniq('cp').map(x => node('cp:' + x, x, lib.filter(y => y.cp === x).length, true))}
           <div className="th2">By type</div>{uniq('type').map(x => node('type:' + x, x, lib.filter(y => y.type === x).length, true))}
           <div className="th2">By year</div>{uniq('year').sort().reverse().map(x => node('year:' + x, x, lib.filter(y => y.year === x).length, true))}
           <div className="th2">Sources</div>{uniq('src').map(x => node('src:' + x, x, lib.filter(y => y.src === x).length, true))}
+          </>}
           <button className="tn" style={{ marginTop: 16 }} onClick={() => set({ panel: 'files' })}><span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}><HelpCircle size={16} aria-hidden />What happens to my files?</span><span /></button></>
           : <div className="rail1"><button className="ib" onClick={() => set({ left: true })} aria-label="Open library"><PanelLeftOpen size={20} aria-hidden /></button><button className="ib" onClick={() => set({ view: 'home' })} aria-label="Next 30 days"><CalendarDays size={20} aria-hidden /></button><button className="ib" onClick={() => set({ view: 'list', node: 'all' })} aria-label="All contracts"><Files size={20} aria-hidden /></button><button className="ib" onClick={() => set({ panel: 'portfolio' })} aria-label="Portfolio at a glance"><PieChart size={20} aria-hidden /></button><button className="ib" onClick={onAdd} aria-label="Add files"><Plus size={20} aria-hidden /></button></div>}
       </nav>

@@ -21,6 +21,8 @@ export interface Tracked { id: number; kind: string; title: string; who: string;
 export interface Contract {
   id: string; name: string; cp: string; type: string; year: string; src: string; files: string[];
   pages: Page[]; items: Item[]; nf: NotFound[]; added: string; sample?: boolean; lines?: boolean;
+  /** True once saved: only the clauses that items or tracked text come from are kept, not the whole text. */
+  slim?: boolean;
   conf: Record<number, { v: string; how: 'confirmed' | 'edited' }>; dis: Record<number, boolean>;
   hist: Record<number, string[]>; pick: Record<number, number>; accepted: boolean; tracked: Tracked[];
 }

@@ -13,6 +13,9 @@ import { Drop, Processing, type Job } from './ui/Add';
 import { Workspace } from './ui/Workspace';
 import { DeletePanel } from './ui/Panels';
 import { SiteChrome } from './ui/SiteChrome';
+import { slimDb } from './lib/slim';
+// Testing mode: skip sign-in and show only the extraction views. Offered when running locally, or with ?dev in the URL.
+const DEV_OK = import.meta.env.DEV || new URLSearchParams(location.search).has('dev') || localStorage.getItem('cc.dev') === '1';
 import { ArrowLeft } from 'lucide-react';
 
 type Phase = 'boot' | 'unsupported' | 'blocked' | 'welcome' | 'setup' | 'locked' | 'app' | 'deleted' | 'corrupt' | 'signedout';
@@ -27,13 +30,16 @@ export function App() {
   const [jobs, setJobs] = useState<Job[]>([]); const [paused, setPaused] = useState(false); const pausedRef = useRef(false); pausedRef.current = paused; const skip = useRef(false); const abort = useRef<AbortController | null>(null); const raws = useRef<Record<string, RawPage[]>>({});
   const [over, setOver] = useState(false); const [del, setDel] = useState(false); const [count, setCount] = useState(0); const [saveErr, setSaveErr] = useState(false); const last = useRef(Date.now());
 
-  useEffect(() => { (async () => { if (!vault.supported()) return setPhase('unsupported'); const st = await vault.status(); if (st === 'blocked') return setPhase('blocked'); setHasVault(st === 'locked'); setPhase(!auth.email() ? 'welcome' : st === 'none' ? 'setup' : 'locked'); })(); }, []);
+  const [focus, setFocus] = useState(false);
+  const bypass = async () => { localStorage.setItem('cc.dev', '1'); vault.useDb('contraclear-dev'); try { if ((await vault.status()) === 'none') await vault.create('Testing', true); else await vault.unlock(); setFocus(true); await enter(); } catch { setPhase('corrupt'); } };
+  const exitDev = () => { localStorage.removeItem('cc.dev'); vault.lock(); location.reload(); };
+  useEffect(() => { (async () => { if (!vault.supported()) return setPhase('unsupported'); if (localStorage.getItem('cc.dev') === '1') return bypass(); const st = await vault.status(); if (st === 'blocked') return setPhase('blocked'); setHasVault(st === 'locked'); setPhase(!auth.email() ? 'welcome' : st === 'none' ? 'setup' : 'locked'); })(); }, []);
   const enter = async () => { try { const d = await vault.load<Db>(); const x = d ? { ...emptyDb(), ...d, settings: { ...emptyDb().settings, ...d.settings } } : emptyDb(); setDbRaw(x); setActive(x.contracts[0]?.id || ''); setScreen(x.contracts.length ? 'ws' : 'drop'); setWsKey(k => ({ n: k.n + 1, home: x.contracts.length > 0 })); setJobs([]); last.current = Date.now(); setHasVault(true); setPhase('app'); } catch { setPhase('corrupt'); } };
   // Save into the vault after every change.
-  useEffect(() => { if (phase !== 'app') return; const t = setTimeout(() => vault.save(db).then(() => setSaveErr(false), () => setSaveErr(true)), 250); return () => clearTimeout(t); }, [db, phase]);
+  useEffect(() => { if (phase !== 'app') return; const t = setTimeout(() => vault.save(slimDb(db)).then(() => setSaveErr(false), () => setSaveErr(true)), 250); return () => clearTimeout(t); }, [db, phase]);
   const lock = async () => { abort.current?.abort(); try { await vault.save(dbRef.current); } catch { /* shown by saveErr */ } vault.lock(); setDbRaw(emptyDb()); setJobs([]); setCount(0); setPhase('locked'); };
   // Auto-lock after idle, with a quiet countdown for the last minute.
-  useEffect(() => { if (phase !== 'app') return; const bump = () => { last.current = Date.now(); }; const ev = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const; ev.forEach(e => addEventListener(e, bump, { passive: true })); const t = setInterval(() => { const left = (LOCK_MS[dbRef.current.settings.lock] || 9e5) - (Date.now() - last.current); if (left <= 0) lock(); else setCount(left <= 6e4 ? Math.ceil(left / 1000) : 0); }, 1000); return () => { ev.forEach(e => removeEventListener(e, bump)); clearInterval(t); }; }, [phase]);
+  useEffect(() => { if (phase !== 'app' || focus) return; const bump = () => { last.current = Date.now(); }; const ev = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const; ev.forEach(e => addEventListener(e, bump, { passive: true })); const t = setInterval(() => { const left = (LOCK_MS[dbRef.current.settings.lock] || 9e5) - (Date.now() - last.current); if (left <= 0) lock(); else setCount(left <= 6e4 ? Math.ceil(left / 1000) : 0); }, 1000); return () => { ev.forEach(e => removeEventListener(e, bump)); clearInterval(t); }; }, [phase, focus]);
 
   const add = (inputs: Input[]) => { if (!inputs.length) return; skip.current = false; setPaused(false); setJobs(inputs.map(input => ({ id: crypto.randomUUID(), input, state: 'waiting' }))); setScreen('run'); };
   const patch = (id: string, p: Partial<Job>) => setJobs(js => js.map(j => j.id === id ? { ...j, ...p } : j));
@@ -67,7 +73,7 @@ export function App() {
     if (phase === 'corrupt') return <Notice title="This vault can’t be read." body="Its data on this device is damaged. You can start a new vault, then import a vault file if you exported one."><button className="b pri" onClick={async () => { await vault.destroy(); setHasVault(false); setPhase('setup'); }}>Start a new vault</button></Notice>;
     if (phase === 'deleted') return <Notice title="Everything is deleted." body="Your vault and email record are gone."><button className="b pri" autoFocus onClick={() => setPhase('welcome')}>Start again</button></Notice>;
     if (phase === 'signedout') return <Notice title="You’ve been signed out." body="Your vault is safe and still locked on this device."><button className="b pri" autoFocus onClick={() => setPhase('welcome')}>Sign in again</button></Notice>;
-    if (phase === 'welcome') return <Welcome hasVault={hasVault} onDone={() => setPhase(hasVault ? 'locked' : 'setup')} onPasskey={async () => { if (!hasVault) return setPhase('setup'); try { await vault.unlock(); await enter(); } catch (e: any) { if (e.message === 'legacy') return setPhase('locked'); if (e.message === 'corrupt') return setPhase('corrupt'); return e.message === 'wrong' ? 'That passkey didn’t open this vault. Use the passkey you made for ContraClear.' : 'The passkey check was cancelled. Nothing changed.'; } }} />;
+    if (phase === 'welcome') return <Welcome onBypass={DEV_OK ? bypass : undefined} hasVault={hasVault} onDone={() => setPhase(hasVault ? 'locked' : 'setup')} onPasskey={async () => { if (!hasVault) return setPhase('setup'); try { await vault.unlock(); await enter(); } catch (e: any) { if (e.message === 'legacy') return setPhase('locked'); if (e.message === 'corrupt') return setPhase('corrupt'); return e.message === 'wrong' ? 'That passkey didn’t open this vault. Use the passkey you made for ContraClear.' : 'The passkey check was cancelled. Nothing changed.'; } }} />;
     if (phase === 'setup') return <Setup onReady={enter} />;
     if (phase === 'locked') return <Locked onOpen={enter} onCorrupt={() => setPhase('corrupt')} />;
     return null;
@@ -77,12 +83,13 @@ export function App() {
   const has = db.contracts.length > 0, showWs = screen === 'ws' && has;
   // Signed in: no site nav or footer, just a small way back to the app's home. It stays inside the app
   // (a full page load would lock the vault), and works as a normal link if opened in a new tab.
-  const goHome = (e: React.MouseEvent) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); if (dbRef.current.contracts.length) openWs(undefined, true); else setScreen('drop'); };
+  const goHome = (e: React.MouseEvent) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); if (dbRef.current.contracts.length) openWs(undefined, !focus); else setScreen('drop'); };
   return <>
     <a className="cc-home" href={import.meta.env.BASE_URL} aria-label="ContraClear home" onClick={goHome}><ArrowLeft size={18} aria-hidden /><span>ContraClear</span></a>
+    {focus && <div className="devpill" role="status">Testing mode: sign-in skipped<button className="lk" onClick={exitDev}>Exit</button></div>}
     {count > 0 && <div className="sbar" role="status" style={{ position: 'fixed', zIndex: 96 }}>Locking in <b className="num">0:{String(count).padStart(2, '0')}</b> because you’ve been away.<button className="b" onClick={() => { last.current = Date.now(); setCount(0); }}>Stay unlocked</button></div>}
     {saveErr && <div className="sbar" role="alert" style={{ position: 'fixed', zIndex: 96 }}>This device is out of space for ContraClear. New changes can’t be saved. Export a vault file, then remove old contracts.</div>}
-    {showWs ? <Workspace key={wsKey.n} db={db} setDb={setDb} active={active} setActive={setActive} startHome={wsKey.home} onAdd={() => setScreen('drop')} onLock={lock} onDelete={() => setDel(true)}
+    {showWs ? <Workspace key={wsKey.n} db={db} setDb={setDb} active={active} setActive={setActive} focus={focus} startHome={wsKey.home && !focus} onAdd={() => setScreen('drop')} onLock={lock} onDelete={() => setDel(true)}
         onSample={() => { const c = sampleContract(); setDb(d => ({ ...d, contracts: [...d.contracts, c] })); setActive(c.id); setWsKey(k => ({ n: k.n + 1, home: false })); }}
         onSignOut={async () => { await lock(); auth.clear(); setPhase('signedout'); }} />
       : screen === 'run' && jobs.length ? <Processing jobs={jobs} paused={paused} onSkip={() => { skip.current = true; }} onCancel={cancel} onPause={() => setPaused(p => !p)} onOpen={id => openWs(id, !id)} onRetry={retry} onChoose={() => { setJobs([]); setScreen('drop'); }} />
