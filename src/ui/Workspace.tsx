@@ -1,7 +1,7 @@
 // The Workspace: library (left), document preview (centre), "What needs you" (right), 90-day strip (top).
 // Ported from design/boards/Workspace1440.dc.html. Everything else is a panel layered on top.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { File as FileIcon, ScanText } from 'lucide-react';
+import { File as FileIcon, ScanText, Trash2 } from 'lucide-react';
 import { Search, ChevronDown, Download, Lock, Settings as Cog, Check, Circle, CircleCheck, UserCheck, SearchX, CalendarPlus, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, LayoutGrid, Printer, PanelLeftClose, PanelLeftOpen, CalendarDays, Files, PieChart, Plus, Pencil, Calendar, DollarSign, ListChecks, Copy, TextSelect, FileSpreadsheet, FileText, KeyRound, HelpCircle, Library, TriangleAlert, Sheet } from 'lucide-react';
 import type { Contract, Db, Item, K } from '../lib/types';
 import { COL, eff, isNeed } from '../lib/types';
@@ -12,13 +12,13 @@ import { Badge, Chip, KIcon, Nla } from './kit';
 import { clearSecond, secondCheck, classify } from '../lib/second';
 import { CalendarPanel, EnginePanel, FilesPanel, PortfolioPanel, SettingsPanel, SharePanel } from './Panels';
 
-interface Props { db: Db; setDb: (f: (d: Db) => Db) => void; active: string; setActive: (id: string) => void; startHome: boolean; focus?: boolean; onAdd: () => void; onLock: () => void; onSample: () => void; onDelete: () => void; onSignOut: () => void }
+interface Props { db: Db; setDb: (f: (d: Db) => Db) => void; active: string; setActive: (id: string) => void; startHome: boolean; focus?: boolean; onRemove: (id: string) => void; onAdd: () => void; onLock: () => void; onSample: () => void; onDelete: () => void; onSignOut: () => void }
 type Track = { step: 'menu' | 'form'; txt: string; x: number; y: number; page: number; kind?: string; title?: string; who?: string; rem?: string };
 const narrow = () => matchMedia('(max-width:900px)').matches;
 const stamp = () => fmtShort(today());
 const paraText = (pa: { lead: string; segs: { x: string }[] }) => (pa.lead + ' ' + pa.segs.map(x => x.x).join('')).trim();
 
-export function Workspace({ focus = false, db, setDb, active, setActive, startHome, onAdd, onLock, onSample, onDelete, onSignOut }: Props) {
+export function Workspace({ onRemove, focus = false, db, setDb, active, setActive, startHome, onAdd, onLock, onSample, onDelete, onSignOut }: Props) {
   const cs = db.contracts, c = cs.find(x => x.id === active) || cs[0];
   const [s, setS] = useState({ sel: 0, hov: 0, hq: '', edit: null as null | { id: number; kind: 'edit' | 'wrong' }, editVal: '', cmd: false, q: '', ci: 0, fl: { c: false, d: false }, pop: '' as '' | 'eng' | 'exp', left: true, page: 1, view: (startHome ? 'home' : 'doc') as 'doc' | 'list' | 'home', node: 'all', panel: '' as '' | 'portfolio' | 'settings' | 'cal' | 'files' | 'share' | 'cloud', formula: 0, track: null as Track | null, hint: false, find: false, fq: '', thumbs: false, zoom: 100, sheet: false, showAgreed: false, showNF: false, drag: '', merged: {} as Record<string, boolean> });
   const set = (p: Partial<typeof s>) => setS(o => ({ ...o, ...p }));
@@ -141,6 +141,8 @@ export function Workspace({ focus = false, db, setDb, active, setActive, startHo
     onDragOver={e => { if (key.startsWith('cp:')) e.preventDefault(); }} onDrop={e => { e.preventDefault(); const id = s.drag, x = cs.find(y => y.id === id); if (!x || !key.startsWith('cp:')) return; const prev = db.cpo[id]; setDb(d => ({ ...d, cpo: { ...d.cpo, [id]: key.slice(3) } })); set({ drag: '' }); say(`Remembered. ${x.name} now shows under ${key.slice(3)}.`, () => { setDb(d => { const o = { ...d.cpo }; if (prev) o[id] = prev; else delete o[id]; return { ...d, cpo: o }; }); setToast(null); }); }}><span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>{icon}{label}</span><span className="num">{n}</span></button>;
   const dupOf = lib.find((x, i) => !s.merged[x.id] && lib.findIndex(y => y.name === x.name && y.cp === x.cp && y.pages.length === x.pages.length) < i);
   const n30 = useMemo(() => next30(cs), [cs]);
+  // Remove a file: its items and kept clauses go. The app shows Undo, which survives even when this was the last file.
+  const removeContract = (id: string) => { const rest = cs.filter(y => y.id !== id); if (id === c.id && rest[0]) setActive(rest[0].id); onRemove(id); };
   const open = (id: string) => { setActive(id); set({ view: 'doc', sel: 0, panel: '' }); };
   const pageWord = c.lines ? 'Line' : 'Page';
 
@@ -242,7 +244,7 @@ export function Workspace({ focus = false, db, setDb, active, setActive, startHo
       </div></section>}
       <nav className="list" aria-label="Library">
         <div className="lh"><span>Files</span><span className="num">{cs.length}</span></div>
-        <div style={{ display: 'grid', gap: 4 }}>{lib.map(x => { const z = status(x), ext = (x.files[0] || '').split('.').pop()!.toLowerCase(), on = s.view === 'doc' && x.id === c.id; return <button key={x.id} className={on ? 'fl on' : 'fl'} aria-current={on || undefined} onClick={() => open(x.id)}><span className="fi" aria-hidden><FileIcon size={30} strokeWidth={1.3} /><i>{ext === 'pdf' ? 'PDF' : ext === 'docx' ? 'W' : 'TXT'}</i></span><span className="fn2">{x.files[0] || x.name}<small><s style={{ background: COL[z.k][0] }} />{z.label.replace('to check', 'to review')}</small></span></button>; })}</div>
+        <div style={{ display: 'grid', gap: 4 }}>{lib.map(x => { const z = status(x), ext = (x.files[0] || '').split('.').pop()!.toLowerCase(), on = s.view === 'doc' && x.id === c.id; return <div key={x.id} className="flrow"><button className={on ? 'fl on' : 'fl'} aria-current={on || undefined} onClick={() => open(x.id)}><span className="fi" aria-hidden><FileIcon size={30} strokeWidth={1.3} /><i>{ext === 'pdf' ? 'PDF' : ext === 'docx' ? 'W' : 'TXT'}</i></span><span className="fn2">{x.files[0] || x.name}<small><s style={{ background: COL[z.k][0] }} />{z.label.replace('to check', 'to review')}</small></span></button><button className="ib fdel" aria-label={`Remove ${x.files[0] || x.name}`} title="Remove" onClick={() => removeContract(x.id)}><Trash2 size={18} aria-hidden /></button></div>; })}</div>
         <button className="fl" style={{ marginTop: 8 }} onClick={onAdd}><span className="fi" aria-hidden><Plus size={22} /></span><span className="fn2">Add files</span></button>
         <div className="fnote"><Lock size={16} aria-hidden /><span>Files stay on this device. <button className="ref" onClick={() => set({ panel: 'files' })}>How it works</button></span></div>
       </nav>

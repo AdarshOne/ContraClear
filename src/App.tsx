@@ -31,6 +31,9 @@ export function App() {
   const [over, setOver] = useState(false); const [del, setDel] = useState(false); const [count, setCount] = useState(0); const [saveErr, setSaveErr] = useState(false); const last = useRef(Date.now());
 
   const [focus, setFocus] = useState(false);
+  const [removed, setRemoved] = useState<{ c: Contract; at: number } | null>(null); const rmT = useRef(0);
+  const removeContract = (id: string) => { const cs = dbRef.current.contracts, at = cs.findIndex(x => x.id === id); if (at < 0) return; setRemoved({ c: cs[at], at }); setDb(d => ({ ...d, contracts: d.contracts.filter(x => x.id !== id) })); clearTimeout(rmT.current); rmT.current = window.setTimeout(() => setRemoved(null), 6000); };
+  const undoRemove = () => { if (!removed) return; const { c, at } = removed; setDb(d => { const l = [...d.contracts]; l.splice(at, 0, c); return { ...d, contracts: l }; }); setActive(c.id); setRemoved(null); setScreen('ws'); };
   const bypass = async () => { localStorage.setItem('cc.dev', '1'); vault.useDb('contraclear-dev'); try { if ((await vault.status()) === 'none') await vault.create('Testing', true); else await vault.unlock(); setFocus(true); await enter(); } catch { setPhase('corrupt'); } };
   const exitDev = () => { localStorage.removeItem('cc.dev'); vault.lock(); location.reload(); };
   useEffect(() => { (async () => { if (!vault.supported()) return setPhase('unsupported'); if (localStorage.getItem('cc.dev') === '1') return bypass(); const st = await vault.status(); if (st === 'blocked') return setPhase('blocked'); setHasVault(st === 'locked'); setPhase(!auth.email() ? 'welcome' : st === 'none' ? 'setup' : 'locked'); })(); }, []);
@@ -86,10 +89,11 @@ export function App() {
   const goHome = (e: React.MouseEvent) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); if (dbRef.current.contracts.length) openWs(undefined, !focus); else setScreen('drop'); };
   return <>
     <a className="cc-home" href={import.meta.env.BASE_URL} aria-label="ContraClear home" onClick={goHome}><ArrowLeft size={18} aria-hidden /><span>ContraClear</span></a>
+    {removed && <div className="toast" role="status">Removed {removed.c.files[0] || removed.c.name} and everything found in it.<button onClick={undoRemove} style={{ marginLeft: 12, background: 'none', border: 0, color: '#fff', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600, minHeight: 32 }}>Undo</button></div>}
     {focus && <div className="devpill" role="status">Testing mode: sign-in skipped<button className="lk" onClick={exitDev}>Exit</button></div>}
     {count > 0 && <div className="sbar" role="status" style={{ position: 'fixed', zIndex: 96 }}>Locking in <b className="num">0:{String(count).padStart(2, '0')}</b> because you’ve been away.<button className="b" onClick={() => { last.current = Date.now(); setCount(0); }}>Stay unlocked</button></div>}
     {saveErr && <div className="sbar" role="alert" style={{ position: 'fixed', zIndex: 96 }}>This device is out of space for ContraClear. New changes can’t be saved. Export a vault file, then remove old contracts.</div>}
-    {showWs ? <Workspace key={wsKey.n} db={db} setDb={setDb} active={active} setActive={setActive} focus={focus} startHome={wsKey.home && !focus} onAdd={() => setScreen('drop')} onLock={lock} onDelete={() => setDel(true)}
+    {showWs ? <Workspace key={wsKey.n} db={db} setDb={setDb} active={active} setActive={setActive} onRemove={removeContract} focus={focus} startHome={wsKey.home && !focus} onAdd={() => setScreen('drop')} onLock={lock} onDelete={() => setDel(true)}
         onSample={() => { const c = sampleContract(); setDb(d => ({ ...d, contracts: [...d.contracts, c] })); setActive(c.id); setWsKey(k => ({ n: k.n + 1, home: false })); }}
         onSignOut={async () => { await lock(); auth.clear(); setPhase('signedout'); }} />
       : screen === 'run' && jobs.length ? <Processing jobs={jobs} paused={paused} onSkip={() => { skip.current = true; }} onCancel={cancel} onPause={() => setPaused(p => !p)} onOpen={id => openWs(id, !id)} onRetry={retry} onChoose={() => { setJobs([]); setScreen('drop'); }} />

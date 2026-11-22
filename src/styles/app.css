@@ -353,3 +353,4 @@ html,body{height:100%}
 .needs{padding:32px 28px 88px}.list{padding-bottom:72px}
 .needs .acts .b.q{border-color:transparent;padding:0 8px;min-height:44px}
 .tbar .ib{background:transparent}
+.flrow{position:relative}.flrow .fl{padding-right:52px}.fdel{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;opacity:0}.flrow:hover .fdel,.fdel:focus-visible{opacity:1}@media (hover:none){.fdel{opacity:1}}
