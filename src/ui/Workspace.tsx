@@ -1,7 +1,7 @@
 // The Workspace: library (left), document preview (centre), "What needs you" (right), 90-day strip (top).
 // Ported from design/boards/Workspace1440.dc.html. Everything else is a panel layered on top.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { File as FileIcon, ScanText, Trash2 } from 'lucide-react';
+import { File as FileIcon, ScanText, Trash2, Sparkles } from 'lucide-react';
 import { Search, ChevronDown, Download, Lock, Settings as Cog, Check, Circle, CircleCheck, UserCheck, SearchX, CalendarPlus, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, LayoutGrid, Printer, PanelLeftClose, PanelLeftOpen, CalendarDays, Files, PieChart, Plus, Pencil, Calendar, DollarSign, ListChecks, Copy, TextSelect, FileSpreadsheet, FileText, KeyRound, HelpCircle, Library, TriangleAlert, Sheet } from 'lucide-react';
 import type { Contract, Db, Item, K } from '../lib/types';
 import { COL, eff, isNeed } from '../lib/types';
@@ -10,6 +10,8 @@ import { fmtShort, today } from '../lib/dates';
 import { next30, status, strip } from '../lib/timeline';
 import { Badge, Chip, KIcon, Nla } from './kit';
 import { clearSecond, secondCheck, classify } from '../lib/second';
+import { MODEL_GB } from '../lib/llm';
+import { LlmPanel } from './LlmPanel';
 import { CalendarPanel, EnginePanel, FilesPanel, PortfolioPanel, SettingsPanel, SharePanel } from './Panels';
 
 interface Props { db: Db; setDb: (f: (d: Db) => Db) => void; active: string; setActive: (id: string) => void; startHome: boolean; focus?: boolean; onRemove: (id: string) => void; onAdd: () => void; onLock: () => void; onSample: () => void; onDelete: () => void; onSignOut: () => void }
@@ -20,7 +22,7 @@ const paraText = (pa: { lead: string; segs: { x: string }[] }) => (pa.lead + ' '
 
 export function Workspace({ onRemove, focus = false, db, setDb, active, setActive, startHome, onAdd, onLock, onSample, onDelete, onSignOut }: Props) {
   const cs = db.contracts, c = cs.find(x => x.id === active) || cs[0];
-  const [s, setS] = useState({ sel: 0, hov: 0, hq: '', edit: null as null | { id: number; kind: 'edit' | 'wrong' }, editVal: '', cmd: false, q: '', ci: 0, fl: { c: false, d: false }, pop: '' as '' | 'eng' | 'exp', left: true, page: 1, view: (startHome ? 'home' : 'doc') as 'doc' | 'list' | 'home', node: 'all', panel: '' as '' | 'portfolio' | 'settings' | 'cal' | 'files' | 'share' | 'cloud', formula: 0, track: null as Track | null, hint: false, find: false, fq: '', thumbs: false, zoom: 100, sheet: false, showAgreed: false, showNF: false, drag: '', merged: {} as Record<string, boolean> });
+  const [s, setS] = useState({ sel: 0, hov: 0, hq: '', edit: null as null | { id: number; kind: 'edit' | 'wrong' }, editVal: '', cmd: false, q: '', ci: 0, fl: { c: false, d: false }, pop: '' as '' | 'eng' | 'exp', left: true, page: 1, view: (startHome ? 'home' : 'doc') as 'doc' | 'list' | 'home', node: 'all', panel: '' as '' | 'portfolio' | 'settings' | 'cal' | 'files' | 'share' | 'cloud' | 'llm', formula: 0, track: null as Track | null, hint: false, find: false, fq: '', thumbs: false, zoom: 100, sheet: false, showAgreed: false, showNF: false, drag: '', merged: {} as Record<string, boolean> });
   const set = (p: Partial<typeof s>) => setS(o => ({ ...o, ...p }));
   const [toast, setToast] = useState<{ m: string; undo?: () => void } | null>(null); const tt = useRef(0);
   const say = (m: string, undo?: () => void) => { clearTimeout(tt.current); setToast({ m, undo }); tt.current = window.setTimeout(() => setToast(null), 5200); };
@@ -56,12 +58,13 @@ export function Workspace({ onRemove, focus = false, db, setDb, active, setActiv
   const trackSave = () => { const t = s.track; if (!t) return; upd(x => ({ ...x, tracked: [...x.tracked, { id: 100 + x.tracked.length, kind: t.kind!, title: t.title!, who: t.who!, rem: t.rem!, txt: t.txt, page: t.page }] })); set({ track: null }); getSelection()?.removeAllRanges(); say('Tracked. You’ll find it under “Tracked by you”.'); };
   const openCmd = (q = '') => { set({ cmd: true, q, ci: 0, pop: '' }); setTimeout(() => document.getElementById('cmdin')?.focus(), 30); };
   const exportCsv = () => { set({ pop: '' }); download('ContraClear.csv', toCsv(cs), 'text/csv'); say(`CSV saved: ${cs.reduce((n, x) => n + x.items.length, 0)} items with quotes and pages.`); };
-  const eng = db.settings.eng === 'device' ? 'device' : 'rules';
+  const eng = db.settings.eng;
   // Switching engines re-checks what hasn't been reviewed yet, across every contract. It is instant and local.
-  const pickEngine = (e: 'rules' | 'device' | 'cloud') => {
+  const pickEngine = (e: 'rules' | 'device' | 'llm' | 'cloud') => {
     if (e === 'cloud') return set({ pop: '', panel: 'cloud' });
+    if (e === 'llm') return set({ pop: '', panel: 'llm' });
     set({ pop: '', sel: 0 }); if (e === eng) return;
-    let agreed = 0, differ = 0; const next = cs.map(x => { if (e === 'rules') return clearSecond(x); const o = secondCheck(x); agreed += o.agreed; differ += o.differ; return o.contract; });
+    let agreed = 0, differ = 0; const next = cs.map(x0 => { const x = clearSecond(x0); if (e === 'rules') return x; const o = secondCheck(x); agreed += o.agreed; differ += o.differ; return o.contract; });
     setDb(d => ({ ...d, contracts: next, settings: { ...d.settings, eng: e } }));
     say(e === 'rules' ? 'Rules only. Every unreviewed item now waits for your check.' : agreed + differ ? `On-device AI checked ${agreed + differ} items here. Both checks agree on ${agreed}; ${differ} ${differ === 1 ? 'needs' : 'need'} you. Nothing left this device.` : 'On-device AI is on. Nothing leaves this device.');
   };
@@ -75,7 +78,7 @@ export function Workspace({ onRemove, focus = false, db, setDb, active, setActiv
   }, [s.q, s.cmd, s.fl, cs, c.id]);
   const cmdList = () => {
     const q = s.q.trim().toLowerCase();
-    const A: [string, string, () => void][] = [['Add files', '', onAdd], ['Confirm the selected item', '↵', () => confirm(sel)], ['Edit the selected item', 'E', () => startEdit(sel)], ['Confirm all items both checks agree on', '⇧↵', acceptAll], ['Add dates to my calendar', 'C', openCal], ['Export: CSV', '', exportCsv], ['Export: calendar file (.ics)', '', openCal], ['Export: encrypted vault file, or import one', '', () => set({ panel: 'share' })], ['Engine: Rules only (free)', '', () => pickEngine('rules')], ['Engine: On-device AI (free)', '', () => pickEngine('device')], ['Engine: Cloud AI with your own key (pennies)', '', () => pickEngine('cloud')], ['Next 30 days', '', () => set({ view: 'home' })], ['Portfolio at a glance', '', () => set({ panel: 'portfolio' })], ['Settings', '', () => set({ panel: 'settings' })], ['What happens to my files?', '', () => set({ panel: 'files' })], ['Lock vault', '', onLock]];
+    const A: [string, string, () => void][] = [['Add files', '', onAdd], ['Confirm the selected item', '↵', () => confirm(sel)], ['Edit the selected item', 'E', () => startEdit(sel)], ['Confirm all items both checks agree on', '⇧↵', acceptAll], ['Add dates to my calendar', 'C', openCal], ['Export: CSV', '', exportCsv], ['Export: calendar file (.ics)', '', openCal], ['Export: encrypted vault file, or import one', '', () => set({ panel: 'share' })], ['Engine: Rules only (free)', '', () => pickEngine('rules')], ['Engine: On-device AI model, Qwen3.5 4B (free)', '', () => pickEngine('llm')], ['Engine: Quick check, no download (free)', '', () => pickEngine('device')], ['Engine: Cloud AI with your own key (pennies)', '', () => pickEngine('cloud')], ['Next 30 days', '', () => set({ view: 'home' })], ['Portfolio at a glance', '', () => set({ panel: 'portfolio' })], ['Settings', '', () => set({ panel: 'settings' })], ['What happens to my files?', '', () => set({ panel: 'files' })], ['Lock vault', '', onLock]];
     if (!cs.some(x => x.sample)) A.push(['Open the sample contract', '', onSample]);
     if (focus) for (const t of ['Add dates to my calendar', 'Export: calendar file (.ics)', 'Next 30 days', 'Portfolio at a glance', 'Settings', 'Lock vault']) { const i = A.findIndex(a => a[0] === t); if (i >= 0) A.splice(i, 1); }
     const L = (q ? A.filter(a => a[0].toLowerCase().includes(q)) : A).map(a => ({ t: a[0], k: a[1], run: a[2] }));
@@ -129,7 +132,7 @@ export function Workspace({ onRemove, focus = false, db, setDb, active, setActiv
   const agreedN = doneIds.filter(id => c.conf[id] === undefined).length, userN = doneIds.length - agreedN, ready = needIds.length === 0;
   // Strip: this contract while reading it, everything otherwise.
   const st = useMemo(() => strip(s.view === 'doc' ? [c] : cs), [cs, c, s.view]);
-  const worst: Record<number, K> = {}; for (const it of c.items) { if (c.dis[it.id]) continue; const k = c.conf[it.id] ? 'g' : eff(it), r = { r: 3, y: 2, o: 2, g: 1 }; if (!worst[it.page] || r[worst[it.page]] < r[k]) worst[it.page] = k; }
+  const worst: Record<number, K> = {}; for (const it of c.items) { if (c.dis[it.id]) continue; const k = c.conf[it.id] ? 'g' : eff(it), r = { r: 3, y: 2, o: 2, a: 2, g: 1 }; if (!worst[it.page] || r[worst[it.page]] < r[k]) worst[it.page] = k; }
   const fq = s.fq.trim().toLowerCase(); let fCount = 0;
   if (fq.length > 1) for (const p of c.pages) for (const pa of p.paras) fCount += paraText(pa).toLowerCase().split(fq).length - 1;
   const mark = (x: string) => { if (fq.length < 2) return x; const i = x.toLowerCase().indexOf(fq); return i < 0 ? x : <>{x.slice(0, i)}<mark className="qf">{x.slice(i, i + fq.length)}</mark>{x.slice(i + fq.length)}</>; };
@@ -185,6 +188,7 @@ export function Workspace({ onRemove, focus = false, db, setDb, active, setActiv
           {s.showNF && <div style={{ display: 'grid', gap: 12 }}>{c.nf.map(n => <div key={n.t} style={{ padding: '4px 12px', display: 'grid', gap: 6 }}><b style={{ fontWeight: 600 }}>{n.t}</b><span className="mute">{n.d}</span><div className="acts"><button className="b" onClick={() => set({ hint: true, sheet: narrow() })}><Plus size={18} aria-hidden />Track this</button><button className="b q" onClick={() => openCmd(n.s)}>Search “{n.s}”</button></div></div>)}</div>}
         </section>
         {disIds.length > 0 && <section className="sec"><div className="sech"><h2>Dismissed</h2></div>{disIds.map(id => <div key={id} className="row" style={{ gridTemplateColumns: '1fr auto', cursor: 'default' }}><s className="mute">{IT(id)!.sentence}</s><button className="b q" onClick={() => upd(x => { const d = { ...x.dis }; delete d[id]; return { ...x, dis: d }; })}>Restore</button></div>)}</section>}
+        {eng !== 'llm' && <div style={{ paddingTop: 16, borderTop: '1px solid #E3E3E3', display: 'grid', gap: 6 }}><button className="b" onClick={() => pickEngine('llm')} style={{ justifySelf: 'start', borderRadius: 999 }}><Sparkles size={18} aria-hidden />Check with the on-device AI</button><span className="faint" style={{ fontSize: 14 }}>Reads renewals, conditions and tricky dates. Free, {MODEL_GB} GB once, nothing sent.</span></div>}
         {focus ? <div className="calb"><span className="faint" style={{ fontSize: 14 }}>↑ ↓ move · ↵ confirm · E edit · ⌘K search</span></div> : <>
         <div className="calb">
           {ready && calEvents([c]).length > 0 ? <><button className="b pri" onClick={openCal} style={{ minHeight: 52, fontSize: 17 }}><CalendarPlus size={20} aria-hidden />Add dates to my calendar <kbd>C</kbd></button><Nla /></>
@@ -266,6 +270,7 @@ export function Workspace({ onRemove, focus = false, db, setDb, active, setActiv
     {s.panel === 'settings' && <SettingsPanel s={db.settings} set={p => setDb(d => ({ ...d, settings: { ...d.settings, ...p } }))} onClose={() => set({ panel: '' })} onEngine={() => set({ panel: '', pop: 'eng' })} onSignOut={onSignOut} onDelete={() => { set({ panel: '' }); onDelete(); }} />}
     {s.panel === 'files' && <FilesPanel onClose={() => set({ panel: '' })} />}
     {s.panel === 'cloud' && <EnginePanel onClose={() => set({ panel: '' })} />}
+    {s.panel === 'llm' && <LlmPanel cs={cs} prov={db.settings.prov} onClose={() => set({ panel: '' })} onDone={(next, msg) => { setDb(d => ({ ...d, contracts: d.contracts.map(x => next.find(y => y.id === x.id) || x), settings: { ...d.settings, eng: 'llm' } })); set({ panel: '', sel: 0 }); say(msg); }} />}
     {s.panel === 'share' && <SharePanel onClose={() => set({ panel: '' })} say={say} onImport={(d, mode) => { setDb(o => mode === 'replace' ? d : { ...o, contracts: [...o.contracts, ...d.contracts.filter(x => !o.contracts.some(y => y.id === x.id))] }); if (mode === 'replace' && d.contracts[0]) setActive(d.contracts[0].id); say(mode === 'replace' ? 'Vault replaced with the file.' : 'Merged. Contracts already here were kept as they are.'); }} />}
     {toast && <div className="toast" role="status">{toast.m}{toast.undo && <button onClick={toast.undo} style={{ marginLeft: 12, background: 'none', border: 0, color: '#fff', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600, minHeight: 32 }}>Undo</button>}</div>}
   </div>;

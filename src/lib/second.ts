@@ -117,4 +117,4 @@ export function secondCheck(c: Contract): { contract: Contract; agreed: number; 
   return { contract: { ...c, items }, agreed, differ };
 }
 /** Back to Rules only: unreviewed items lose their second reading and wait for the user again. */
-export const clearSecond = (c: Contract): Contract => c.sample ? c : { ...c, items: c.items.map(it => it.fact && c.conf[it.id] === undefined ? { ...it, ai: undefined, aiNote: undefined, conf: undefined, k: it.k === 'r' ? 'r' as const : 'o' as const, value: it.conf ? it.conf[0].v : it.value } : it) };
+export const clearSecond = (c: Contract): Contract => c.sample ? c : { ...c, items: c.items.filter(it => it.k !== 'a' || c.conf[it.id] !== undefined).map(it => it.fact && c.conf[it.id] === undefined ? { ...it, ai: undefined, aiNote: undefined, conf: undefined, k: it.k === 'r' ? 'r' as const : 'o' as const, value: it.conf ? it.conf[0].v : it.value } : it) };

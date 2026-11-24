@@ -54,3 +54,22 @@ test('OCR lines and layout blocks become paragraphs in reading order', () => {
   expect(assemble(lines, [R('header', 690, 0, 810, 40), R('paragraph_title', 90, 95, 420, 125), R('text', 90, 135, 420, 250), R('table', 90, 290, 500, 330)]))
     .toEqual(['3. FEES AND PAYMENT', '3.1 Customer shall pay the fees within thirty (30) days.', '3.2 Late amounts accrue interest at 1% per month.', 'Hosting | $380']);
 });
+
+import { applyLlm, clausesToAsk, locate, type LlmItem } from './llm';
+test('AI answers are compared with the rules check, and only exact quotes count', async () => {
+  const c = await processInput({ name: 'x.pdf', src: 't', raw }, { prov: 'Ontario', rem: '', lock: '', copies: false, eng: 'rules' }, () => {}, async () => {});
+  const cls = clausesToAsk(c); const find = (re: RegExp) => cls.find(x => re.test(x.text))!;
+  const base: Omit<LlmItem, 'kind' | 'quote' | 'summary'> = { who: 'Client', to_whom: 'Provider', amount: null, percent: null, frequency: 'none', date: { type: 'none', fixed: null, anchor: null, offset: null, unit: 'none', direction: 'none', day_of_period: null }, renewal: null, trigger: null, consequence: null, methods: [] };
+  const fees = find(/7\.3/), renew = find(/12\.1/), early = find(/12\.2/);
+  expect(locate('a fixed monthly retainer of four thousand', fees.text)).toBeGreaterThan(-1); expect(locate('pay ten million dollars', fees.text)).toBe(-1);
+  const out = applyLlm(c, [
+    { cl: fees, items: [{ ...base, kind: 'payment', quote: 'Client shall pay Provider a fixed monthly retainer of four thousand five hundred dollars ($4,500.00) CAD', amount: 4500, frequency: 'monthly', summary: 'The client pays $4,500 every month.' }, { ...base, kind: 'payment', quote: 'Client shall pay ten million dollars', amount: 1e7, summary: 'made up' }] },
+    { cl: renew, items: [{ ...base, kind: 'renewal', quote: renew.text.slice(renew.text.indexOf('unless'), renew.text.indexOf('unless') + 60), renewal: { automatic: true, term_months: 12, notice_days: 60 }, date: { ...base.date, type: 'relative', anchor: 'renewal date', offset: 60, unit: 'days', direction: 'before' }, summary: 'It renews unless notice is given 60 days before.' }] },
+    { cl: early, items: [{ ...base, kind: 'condition', quote: 'Client shall pay the early termination fee in Schedule B', trigger: 'the client ends the agreement early', consequence: 'the client pays the fee in Schedule B', summary: 'If the client ends early, it pays the Schedule B fee.' }] },
+  ], 'Ontario');
+  const it = (re: RegExp) => out.contract.items.find(i => re.test(i.sentence))!;
+  expect(it(/\$4,500 every month/).k).toBe('g'); expect(it(/stop it renewing/).k).toBe('g');
+  expect(out.dropped).toBe(1); expect(out.added).toBe(1);
+  const cond = out.contract.items.find(i => i.k === 'a')!; expect(cond.sentence).toBe('If the client ends the agreement early, the client pays the fee in Schedule B.');
+  expect(out.contract.pages.find(p => p.n === cond.page)!.paras.some(pa => pa.segs.some(sg => sg.q === cond.id))).toBe(true);
+});

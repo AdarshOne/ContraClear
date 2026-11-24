@@ -20,11 +20,16 @@ export async function processInput(inp: Input, s: Settings, on: (p: Progress) =>
   const count = { money: r.items.filter(i => i.kind === 'money').length, dates: r.items.filter(i => i.kind === 'date').length, duties: r.items.filter(i => i.kind === 'duty').length };
   await step({ stage: 2, pages: raw.length, ...count });
   // The AI check runs only with the on-device engine. In Rules only these two stages report themselves as off.
-  const aiOff = s.eng !== 'device';
+  const aiOff = s.eng !== 'device' && s.eng !== 'llm';
   let c: Contract = { id: uid(), name: '', cp: r.cp, type: r.type, year: r.year, src: inp.src, files: [inp.name], pages: r.pages, items: r.items, nf: r.nf, added: iso(today()), lines, ocr: inp.ocr || undefined, ocrQuality: inp.ocr ? raw.map(p => p.quality ?? 0) : undefined, ...blankState() };
   await step({ stage: 3, pages: raw.length, ...count, aiOff });
   let agreed: number | undefined;
-  if (!aiOff) { const out = secondCheck(c); c = out.contract; agreed = out.agreed; }
+  if (s.eng === 'llm') {
+    // The on-device model was chosen (and its download approved) in the workspace. If it can't run here, fall back to the quick check.
+    try { const { loadLlm, llmCheck } = await import('./llm'); await loadLlm((f, t) => on({ stage: 3, pages: raw.length, ...count, note: `Getting the AI ready: ${Math.round(f * 100)}%${t ? ' · ' + t.slice(0, 60) : ''}` }));
+      const out = await llmCheck(c, s.prov, note => on({ stage: 3, pages: raw.length, ...count, note })); c = out.contract; agreed = out.agreed; }
+    catch { const out = secondCheck(c); c = out.contract; agreed = out.agreed; }
+  } else if (!aiOff) { const out = secondCheck(c); c = out.contract; agreed = out.agreed; }
   await step({ stage: 4, pages: raw.length, ...count, aiOff, agreed });
   const f = r.items.find(i => i.formula && i.kind === 'date');
   await step({ stage: 5, pages: raw.length, ...count, aiOff, agreed, formula: f?.formula?.[2] });

@@ -35,7 +35,7 @@ export function SettingsPanel({ s, set, onClose, onEngine, onSignOut, onDelete }
   return <Modal label="Settings" onClose={onClose} style={{ width: 560, gap: 20 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><h2 style={{ margin: 0, fontSize: 22 }}>Settings</h2><button className="b q" onClick={onClose}>Done</button></div>
     <div className="set">{sel('s1', 'Province, for holidays', 'prov', PROV)}{sel('s2', 'Default reminders', 'rem', ['2 weeks and 2 days before', '1 week before', '1 day before'])}{sel('s3', 'Auto-lock after', 'lock', ['15 minutes', '5 minutes', '1 hour'])}
-      <span>Engine</span><button className="b" onClick={onEngine} style={{ justifySelf: 'start' }}>{s.eng === 'device' ? 'On-device AI (free)' : 'Rules only (free)'}</button>
+      <span>Engine</span><button className="b" onClick={onEngine} style={{ justifySelf: 'start' }}>{s.eng === 'llm' ? 'On-device AI model (free)' : s.eng === 'device' ? 'Quick check (free)' : 'Rules only (free)'}</button>
       <span id="cpl">Keep encrypted copies of files</span><button className="b" role="switch" aria-checked={s.copies} aria-labelledby="cpl" onClick={() => set({ copies: !s.copies })} style={{ justifySelf: 'start' }}>{s.copies ? 'On' : 'Off'}</button></div>
     <div className="mute" style={{ fontSize: 14 }}>The province applies to contracts you add from now on.</div>
     <div className="acts" style={{ borderTop: '1px solid #E3E3E3', paddingTop: 16 }}><button className="b" onClick={onSignOut}>Sign out</button><button className="b q" onClick={onDelete}>Delete everything</button></div>
