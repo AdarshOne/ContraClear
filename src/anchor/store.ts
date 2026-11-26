@@ -73,6 +73,7 @@ export class AnchorStore {
     await this.db.put('clauses', { docId: c.docId, versionId: c.versionId, clauseId: c.clauseId, occurrence: c.occurrence, box: await this.codec.seal(next) });
     const l = this.mem.get(c.docId)?.get(c.clauseId); if (l) { const i = l.findIndex(x => x.versionId === c.versionId && x.occurrence === c.occurrence); if (i >= 0) l[i] = next; }
   }
+  close(): void { this.db.close(); }
   async deleteDoc(docId: string): Promise<void> {
     const tx = this.db.transaction(['docs', 'versions', 'clauses', 'postings'], 'readwrite');
     for (const k of await tx.objectStore('clauses').index('byDoc').getAllKeys(docId)) await tx.objectStore('clauses').delete(k);

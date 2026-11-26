@@ -14,6 +14,8 @@ import { Workspace } from './ui/Workspace';
 import { DeletePanel } from './ui/Panels';
 import { SiteChrome } from './ui/SiteChrome';
 import { slimDb } from './lib/slim';
+import { anchorContract } from './lib/versions';
+import { AnchorStore } from './anchor';
 // Testing mode: skip sign-in and show only the extraction views. Offered when running locally, or with ?dev in the URL.
 const DEV_OK = import.meta.env.DEV || new URLSearchParams(location.search).has('dev') || localStorage.getItem('cc.dev') === '1';
 import { ArrowLeft } from 'lucide-react';
@@ -31,16 +33,18 @@ export function App() {
   const [over, setOver] = useState(false); const [del, setDel] = useState(false); const [count, setCount] = useState(0); const [saveErr, setSaveErr] = useState(false); const last = useRef(Date.now());
 
   const [focus, setFocus] = useState(false);
+  // Clause anchors live in their own store, encrypted with the vault's key; open while the vault is open.
+  const anchors = useRef<AnchorStore | null>(null);
   const [removed, setRemoved] = useState<{ c: Contract; at: number } | null>(null); const rmT = useRef(0);
-  const removeContract = (id: string) => { const cs = dbRef.current.contracts, at = cs.findIndex(x => x.id === id); if (at < 0) return; setRemoved({ c: cs[at], at }); setDb(d => ({ ...d, contracts: d.contracts.filter(x => x.id !== id) })); clearTimeout(rmT.current); rmT.current = window.setTimeout(() => setRemoved(null), 6000); };
+  const removeContract = (id: string) => { const cs = dbRef.current.contracts, at = cs.findIndex(x => x.id === id); if (at < 0) return; setRemoved({ c: cs[at], at }); setDb(d => ({ ...d, contracts: d.contracts.filter(x => x.id !== id) })); clearTimeout(rmT.current); rmT.current = window.setTimeout(() => { setRemoved(null); const gone = cs[at]; if (gone.docId && anchors.current && !dbRef.current.contracts.some(x => x.docId === gone.docId)) anchors.current.deleteDoc(gone.docId).catch(() => {}); }, 6000); };
   const undoRemove = () => { if (!removed) return; const { c, at } = removed; setDb(d => { const l = [...d.contracts]; l.splice(at, 0, c); return { ...d, contracts: l }; }); setActive(c.id); setRemoved(null); setScreen('ws'); };
   const bypass = async () => { localStorage.setItem('cc.dev', '1'); vault.useDb('contraclear-dev'); try { if ((await vault.status()) === 'none') await vault.create('Testing', true); else await vault.unlock(); setFocus(true); await enter(); } catch { setPhase('corrupt'); } };
   const exitDev = () => { localStorage.removeItem('cc.dev'); vault.lock(); location.reload(); };
   useEffect(() => { (async () => { if (!vault.supported()) return setPhase('unsupported'); if (localStorage.getItem('cc.dev') === '1') return bypass(); const st = await vault.status(); if (st === 'blocked') return setPhase('blocked'); setHasVault(st === 'locked'); setPhase(!auth.email() ? 'welcome' : st === 'none' ? 'setup' : 'locked'); })(); }, []);
-  const enter = async () => { try { const d = await vault.load<Db>(); const x = d ? { ...emptyDb(), ...d, settings: { ...emptyDb().settings, ...d.settings } } : emptyDb(); setDbRaw(x); setActive(x.contracts[0]?.id || ''); setScreen(x.contracts.length ? 'ws' : 'drop'); setWsKey(k => ({ n: k.n + 1, home: x.contracts.length > 0 })); setJobs([]); last.current = Date.now(); setHasVault(true); setPhase('app'); } catch { setPhase('corrupt'); } };
+  const enter = async () => { try { const d = await vault.load<Db>(); const x = d ? { ...emptyDb(), ...d, settings: { ...emptyDb().settings, ...d.settings } } : emptyDb(); setDbRaw(x); setActive(x.contracts[0]?.id || ''); setScreen(x.contracts.length ? 'ws' : 'drop'); setWsKey(k => ({ n: k.n + 1, home: x.contracts.length > 0 })); setJobs([]); last.current = Date.now(); setHasVault(true); setPhase('app'); anchors.current?.close(); anchors.current = await AnchorStore.open().catch(e => { console.error(e); return null; }); } catch { setPhase('corrupt'); } };
   // Save into the vault after every change.
   useEffect(() => { if (phase !== 'app') return; const t = setTimeout(() => vault.save(slimDb(db)).then(() => setSaveErr(false), () => setSaveErr(true)), 250); return () => clearTimeout(t); }, [db, phase]);
-  const lock = async () => { abort.current?.abort(); try { await vault.save(dbRef.current); } catch { /* shown by saveErr */ } vault.lock(); setDbRaw(emptyDb()); setJobs([]); setCount(0); setPhase('locked'); };
+  const lock = async () => { abort.current?.abort(); try { await vault.save(dbRef.current); } catch { /* shown by saveErr */ } vault.lock(); anchors.current?.close(); anchors.current = null; setDbRaw(emptyDb()); setJobs([]); setCount(0); setPhase('locked'); };
   // Auto-lock after idle, with a quiet countdown for the last minute.
   useEffect(() => { if (phase !== 'app' || focus) return; const bump = () => { last.current = Date.now(); }; const ev = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const; ev.forEach(e => addEventListener(e, bump, { passive: true })); const t = setInterval(() => { const left = (LOCK_MS[dbRef.current.settings.lock] || 9e5) - (Date.now() - last.current); if (left <= 0) lock(); else setCount(left <= 6e4 ? Math.ceil(left / 1000) : 0); }, 1000); return () => { ev.forEach(e => removeEventListener(e, bump)); clearInterval(t); }; }, [phase, focus]);
 
@@ -51,8 +55,11 @@ export function App() {
     const ac = new AbortController(); abort.current = ac; patch(j.id, { state: 'reading', progress: { stage: 0 } });
     const many = jobs.length > 1, slow = matchMedia('(prefers-reduced-motion: reduce)').matches ? 150 : 520;
     const pace = () => new Promise<void>(res => { const tick = () => pausedRef.current && !ac.signal.aborted ? setTimeout(tick, 150) : res(); setTimeout(tick, skip.current || many ? 0 : slow); });
-    processInput(j.input, dbRef.current.settings, progress => patch(j.id, { progress }), pace, ac.signal).then(c => {
-      setDb(d => ({ ...d, contracts: [...d.contracts, c] })); patch(j.id, { state: 'done', contractId: c.id, items: c.items.length, need: c.items.filter(i => isNeed(c, i.id)).length });
+    processInput(j.input, dbRef.current.settings, progress => patch(j.id, { progress }), pace, ac.signal).then(async c0 => {
+      // Anchor its clauses; if it's a new version of a contract already here, it replaces that one and keeps your review.
+      const a: Awaited<ReturnType<typeof anchorContract>> = anchors.current ? await anchorContract(c0, anchors.current, dbRef.current.contracts).catch(e => { console.error(e); return { contract: c0 }; }) : { contract: c0 };
+      const c = a.replaces ? { ...a.contract, id: a.replaces.id } : a.contract;
+      setDb(d => ({ ...d, contracts: a.replaces ? d.contracts.map(x => x.id === c.id ? c : x) : [...d.contracts, c] })); patch(j.id, { state: 'done', contractId: c.id, items: c.items.length, need: c.items.filter(i => isNeed(c, i.id)).length, ...(a.report ? { update: a.report } : {}) });
     }, (e: any) => { if (e?.name === 'AbortError') return patch(j.id, { state: 'cancelled' }); if (e instanceof ReadError) { if (e.raw) raws.current[j.id] = e.raw; return patch(j.id, { state: 'failed', code: e.code, detail: e.detail }); } console.error(e); patch(j.id, { state: 'failed', code: 'other' }); });
   }, [jobs, paused, phase]);
   const cancel = () => { abort.current?.abort(); setPaused(false); setJobs(js => js.map(j => j.state === 'waiting' || j.state === 'reading' ? { ...j, state: 'cancelled' } : j)); };

@@ -13,16 +13,20 @@ export interface Item {
   fact?: Fact;
   /** Why the on-device check could not vouch for this item, when it couldn't. */
   aiNote?: string;
+  /** The clause this item came from (`clauseId#occurrence`, see src/anchor). */
+  anchor?: string;
 }
 export type Cls = 'payment' | 'late' | 'tax' | 'term' | 'renewal' | 'cancel' | 'deadline' | 'notice' | 'insurance' | 'other';
 export interface Fact { cls: Cls; amt?: number; freq?: 'monthly' | 'yearly' | 'once'; iso?: string; days?: number; biz?: boolean; pct?: number; tax?: boolean; methods?: string[] }
 export interface NotFound { t: string; d: string; s: string }
-export interface Tracked { id: number; kind: string; title: string; who: string; rem: string; txt: string; page: number }
+export interface Tracked { id: number; kind: string; title: string; who: string; rem: string; txt: string; page: number; anchor?: string }
 export interface Contract {
   id: string; name: string; cp: string; type: string; year: string; src: string; files: string[];
   pages: Page[]; items: Item[]; nf: NotFound[]; added: string; sample?: boolean; lines?: boolean;
   /** True once saved: only the clauses that items or tracked text come from are kept, not the whole text. */
   slim?: boolean;
+  /** Document family (stable across versions), this version's hash and its number, from clause anchoring. */
+  docId?: string; versionId?: string; version?: number;
   /** The text was read from a scan by OCR, so wording should be checked carefully. */
   ocr?: boolean;
   /** OCR confidence per page (0–1), for scanned files. */
