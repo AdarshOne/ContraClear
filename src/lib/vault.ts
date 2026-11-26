@@ -65,6 +65,11 @@ export const vault = {
   /** How this vault opens. `legacy` is a vault from the passphrase version: it opens once with the recovery key. */
   async info(): Promise<{ kind: Kind; cred: boolean; legacy: boolean }> { const m = await get<any>('meta'); if (!m?.rec) throw new Error('corrupt'); return { kind: m.kind || 'passkey', cred: !!m.cred, legacy: m.v !== 2 }; },
   isOpen: () => !!dek,
+  /** Name of this vault's database. Companion stores (clause anchors) are named after it, so testing mode stays separate. */
+  dbName: () => DBN,
+  /** Encrypt any JSON value with the vault's key, for stores kept outside the main vault record. Throws when locked. */
+  async sealJson(value: unknown): Promise<{ iv: string; ct: string }> { if (!dek) throw new Error('locked'); return seal(dek, enc.encode(JSON.stringify(value))); },
+  async openJson<T>(box: { iv: string; ct: string }): Promise<T> { if (!dek) throw new Error('locked'); return JSON.parse(dec.decode(await unseal(dek, box))) as T; },
   /** Testing mode keeps its own vault, separate from the real one. */
   useDb(name: string) { DBN = name; dek = null; },
   /** New vault. Throws 'cancelled' or 'unsupported' if no passkey was made; `device` skips the passkey. */
@@ -83,7 +88,7 @@ export const vault = {
   lock() { dek = null; },
   async save(data: unknown) { if (!dek) return; await put('data', await seal(dek, enc.encode(JSON.stringify(data)))); },
   async load<T>(): Promise<T | null> { const b = await get<Blob1>('data'); if (!b) return null; try { return JSON.parse(dec.decode(await unseal(dek!, b))); } catch { throw new Error('corrupt'); } },
-  async destroy() { dek = null; await new Promise<void>(res => { const r = indexedDB.deleteDatabase(DBN); r.onsuccess = r.onerror = r.onblocked = () => res(); }); },
+  async destroy() { dek = null; await new Promise<void>(res => { const r = indexedDB.deleteDatabase(`${DBN}-anchors`), t = setTimeout(res, 3000); r.onsuccess = r.onerror = () => { clearTimeout(t); res(); }; }); await new Promise<void>(res => { const r = indexedDB.deleteDatabase(DBN); r.onsuccess = r.onerror = r.onblocked = () => res(); }); },
   /** The vault as a file, locked with a new one-time share code. Send the code separately. */
   async exportFile(): Promise<{ blob: Blob; code: string }> { const code = newRecoveryKey(); return { code, blob: new Blob([JSON.stringify({ app: 'ContraClear', meta: { pass: await wrap(await rawDek(), normKey(code)) }, data: await get<Blob1>('data') })], { type: 'application/octet-stream' }) }; },
   /** Decrypts a vault file with its share code and returns its contents. Nothing is written. */
